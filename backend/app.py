@@ -1112,36 +1112,36 @@ def export_team_schedules():
                 worksheet.merge_cells('AG3:AI3') # Changed from AG3:AI3
                 conge_cell = worksheet['AG3']
                 conge_cell.value = ' - : Congés'
-                
-                # Row 4: Empty row for spacing
-                
-                # Row 5: Phone numbers and other legends
-                worksheet.merge_cells('B5:E5')
-                phone_cell = worksheet['B5']
+
+                # Row 4: Phone numbers and other legends
+                worksheet.merge_cells('B4:E4')
+                phone_cell = worksheet['B4']
                 phone_cell.value = 'Tél. : 819 293-2071, poste 56221'
                 
-                worksheet.merge_cells('G5:Q5')
-                phone_sans_frais = worksheet['G5']
+                worksheet.merge_cells('G4:Q4')
+                phone_sans_frais = worksheet['G4']
                 phone_sans_frais.value = 'Sans frais (1 800 263-2572, poste 56221)'
-                
-                worksheet.merge_cells('AA5:AK5') # Changed from AA4:AK4
-                legend_d = worksheet['AA5']
+
+                worksheet.merge_cells('AA4:AK4') # Changed from AA5:AK5
+                legend_d = worksheet['AA4']
                 legend_d.value = 'D9h ou D17h : la garde Débute à 9h ou 17h'
                 cyan_fill = PatternFill(start_color='00FFFF', end_color='00FFFF', fill_type='solid')
                 legend_d.fill = cyan_fill
                 
-                # Row 6
-                worksheet.merge_cells('AA6:AK6') # Changed from AA5:AK5
-                legend_f = worksheet['AA6']
+                # Row 5
+                worksheet.merge_cells('AA5:AK5') # Changed from AA5:AK5
+                legend_f = worksheet['AA5']
                 legend_f.value = 'F9h ou F17h : la garde Finit à 9h ou 17h'
                 legend_f.fill = cyan_fill
                 # --- HEADER FORMATTING (MODIFICATIONS END) ---
                 
+                # Row 6: Empty row for spacing
+
                 # Set row heights
                 worksheet.row_dimensions[1].height = 30
-                for row_idx in range(2, 6):
+                for row_idx in range(2, 7):
                     worksheet.row_dimensions[row_idx].height = 20
-                worksheet.row_dimensions[7].height = 10
+                worksheet.row_dimensions[6].height = 10
                 for row_idx in range(8, 11):
                     worksheet.row_dimensions[row_idx].height = 15
                 

@@ -481,16 +481,31 @@ function displaySchedulesList(schedules) {
             dayDisplays = days.map(day => {
                 const details = scheduleDetails[day];
                 if (!details || details === null || details === 0 || details === '0') {
-                    return '';
-                }
-                if (typeof details === 'string') {
-                    return details;
-                }
-                if (details && details.activity_type) {
-                    return details.activity_type;
-                }
-                return '';
-            });
+                    // Preprocess: inject F\n9h after night shift (X or D at 17h)
+                    // Preprocess: inject F\n9h after night shift (X or D at 17h)
+                    memberSchedules.forEach(({ member, schedule }) => {
+                        for (let i = 1; i < dateRange.length; i++) {
+                            const prevDateStr = getLocalDateString(dateRange[i - 1]);
+                            const dateStr = getLocalDateString(dateRange[i]);
+                            const prevDayData = schedule[prevDateStr];
+                            if (!schedule[dateStr] && prevDayData && prevDayData.activity_type && (
+                                prevDayData.activity_type.toUpperCase() === 'X' ||
+                                (prevDayData.activity_type.toUpperCase() === 'D' && prevDayData.start_time === '17:00')
+                            )) {
+                                schedule[dateStr] = { activity_type: 'F', end_time: '09:00' };
+                            }
+                        }
+                    });
+                    return `
+                        <div class="bg-gray-800 rounded-lg shadow-lg mb-6 overflow-hidden">
+                            <!-- Team Header -->
+                            <div class="bg-gradient-to-r ${team.color ? `from-${team.color}-600 to-${team.color}-700` : 'from-blue-600 to-blue-700'} px-6 py-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-4 h-4 rounded-full ${team.color ? `bg-${team.color}-300` : 'bg-blue-300'}"></div>
+                                        /*...existing code...*/
+                    `;
+            }   });
         }
 
         // Convert \n to <br> tags for proper line breaks in HTML
@@ -1141,7 +1156,7 @@ function openEmployeeCalendar(employeeId) {
 
     // Wait for modal to be fully rendered before generating calendar
     setTimeout(() => {
-            // Load employee calendar data using the same weekly schedule API as the table
+            // Load employee calendar data using the dedicated calendar API
             const currentDate = new Date();
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1;
@@ -1151,45 +1166,14 @@ function openEmployeeCalendar(employeeId) {
             currentCalendarMonth = currentDate.getMonth();
             currentCalendarEmployeeId = employeeId;
             
-            // Get all weeks that overlap with this month
-            const firstDayOfMonth = new Date(year, month - 1, 1);
-            const lastDayOfMonth = new Date(year, month, 0);
-            
-            // Calculate all weeks we need to fetch
-            const weeks = [];
-            let currentWeekStart = new Date(firstDayOfMonth);
-            currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Go to Sunday
-            
-            while (currentWeekStart <= lastDayOfMonth) {
-                weeks.push(new Date(currentWeekStart));
-                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-            }
-            
-            // Fetch data for all weeks and combine
-            const weekPromises = weeks.map(weekStart => {
-                const weekDate = weekStart.toISOString().split('T')[0];
-                return fetch(`http://127.0.0.1:5001/api/schedule/weekly?date=${weekDate}`)
-                    .then(response => response.json())
-                    .then(weeklyData => {
-                        const employeeData = weeklyData.find(w => w.Name === employee.name);
-                        return { weekStart, employeeData };
-                    });
-            });
-            
-            Promise.all(weekPromises)
-                .then(weekResults => {
-                    console.log('Weekly schedule data received:', weekResults);
-                    
-                    // Combine all weeks into a single calendar data object
-                    let calendarData = {};
-                    
-                    weekResults.forEach(({ weekStart, employeeData }) => {
-                        if (employeeData) {
-                            const weekCalendarData = convertWeeklyToCalendarData(employeeData, weekStart, month);
-                            calendarData = { ...calendarData, ...weekCalendarData };
-                        }
-                    });
-                    
+            // Fetch calendar data from the dedicated API
+            fetch(`http://127.0.0.1:5001/api/workers/${employeeId}/calendar?year=${year}&month=${month}`)
+                .then(response => response.json())
+                .then(calendarData => {
+                    console.log('Calendar data received:', calendarData);
+                    // Debug: check specific dates
+                    console.log('Sept 25 data:', calendarData['2025-09-25']);
+                    console.log('Sept 26 data:', calendarData['2025-09-26']);
                     generateEmployeeCalendar(calendarData);
                 })
                 .catch(error => {
@@ -1293,7 +1277,7 @@ function generateEmployeeCalendar(calendarData) {
     // Add days of the month with new layout design (no empty cells)
     for (let day = 1; day <= daysInMonth; day++) {
         const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayData = calendarData[dateKey];
+        let dayData = calendarData[dateKey];
         
         // Calculate grid position for the first day of the month
         const dayOfWeek = new Date(currentYear, currentMonth, day).getDay();
@@ -1302,6 +1286,18 @@ function generateEmployeeCalendar(calendarData) {
         let dayClass = `calendar-day h-16 border border-gray-300 dark:border-gray-500 rounded relative cursor-pointer transition-colors ${gridColumnStart}`;
         let hasActivity = false;
         let activityType = '';
+        
+        // Inject F\n9h if previous day was a night shift (exactly like team schedule)
+        if (!dayData) {
+            const prevDate = new Date(currentYear, currentMonth, day - 1);
+            const prevDateKey = prevDate.toISOString().split('T')[0];
+            const prevDayData = calendarData[prevDateKey];
+            if (prevDayData && prevDayData.is_night_shift) {
+                // Use the actual end time from the previous day's data, default to 09:00
+                const endTime = prevDayData.end_time || '09:00';
+                dayData = { activity_type: 'F', end_time: endTime };
+            }
+        }
         
         // Check if there's schedule data for this day
         if (dayData && dayData.activity_type) {
@@ -1327,11 +1323,12 @@ function generateEmployeeCalendar(calendarData) {
         // Add activity indicator in center if there's an activity
         if (hasActivity && activityType) {
             const activityColor = getActivityTypeColor(activityType);
+            const formattedActivity = formatScheduleDisplay(dayData);
             dayContent += `
                 <!-- Activity type in center with background color -->
                 <div class="absolute inset-2 flex items-center justify-center">
                     <div class="${activityColor} text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
-                        ${activityType}
+                        ${formattedActivity}
                     </div>
                 </div>
             `;
@@ -1409,18 +1406,31 @@ function displayDetailedScheduleModal(date, scheduleData, employee, dayData) {
     if (scheduleData && scheduleData.length > 0) {
         // Use API data if available
         const shift = scheduleData[0]; // Take the first shift
-        const activityType = shift.activity_type || 'N/A';
-        const activityDescription = activityDescriptions[activityType.toUpperCase()] || activityType;
-        
+        let activityType = shift.activity_type || 'N/A';
+        let activityDescription = activityDescriptions[activityType.toUpperCase()] || activityType;
+
+        // Map M and V to full description
+        if (activityType.toUpperCase() === 'M') {
+            activityDescription = 'Maladie';
+        } else if (activityType.toUpperCase() === 'V') {
+            activityDescription = 'Vacances';
+        }
+
+        // For night shift end (F), show main activity type of the whole shift if available
+        if (activityType.toUpperCase() === 'F' && shift.main_activity_type) {
+            activityType = shift.main_activity_type;
+            activityDescription = activityDescriptions[activityType.toUpperCase()] || activityType;
+        }
+
         details += `<strong>Type d'activité:</strong> ${activityType.toUpperCase()} - ${activityDescription}<br>`;
         details += `<strong>Heure de début:</strong> ${shift.start_time || 'N/A'}<br>`;
         details += `<strong>Heure de fin:</strong> ${shift.end_time || 'N/A'}<br>`;
         details += `<strong>Durée:</strong> ${shift.hours_worked || 0}h<br>`;
-        
+
         if (shift.is_night_shift) {
             details += `<strong>Équipe de nuit:</strong> Oui 🌙<br>`;
         }
-        
+
         // Store for edit mode
         currentData = {
             activityType: shift.activity_type || 'X',
@@ -1431,9 +1441,17 @@ function displayDetailedScheduleModal(date, scheduleData, employee, dayData) {
         };
     } else {
         // Fallback to display value information
+        let activityType = displayValue.toUpperCase();
+        let activityDescription = activityDescriptions[activityType] || activityType;
+        // Map M and V to full description
+        if (activityType === 'M') {
+            activityDescription = 'Maladie';
+        } else if (activityType === 'V') {
+            activityDescription = 'Vacances';
+        }
         if (displayValue.includes('F')) {
             // This is the end day of a night shift (F\n09h)
-            details += `<strong>Type d'activité:</strong> F - Fin d'équipe de nuit<br>`;
+            details += `<strong>Type d'activité:</strong> X - Garde<br>`;
             // Extract time from display value like "F\n09h"
             const timeMatch = displayValue.match(/(\d+)h/);
             if (timeMatch) {
@@ -1444,8 +1462,6 @@ function displayDetailedScheduleModal(date, scheduleData, employee, dayData) {
             details += `<strong>Équipe de nuit:</strong> Oui 🌙<br>`;
         } else {
             // This is a regular activity or start day of night shift
-            const activityType = displayValue.toUpperCase();
-            const activityDescription = activityDescriptions[activityType] || activityType;
             details += `<strong>Type d'activité:</strong> ${activityType} - ${activityDescription}<br>`;
             details += `<strong>Heure de début:</strong> 17:00<br>`;
             details += `<strong>Heure de fin:</strong> 09:00<br>`;
@@ -3577,8 +3593,19 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                             
                             dateRange.forEach(date => {
                                 const dateStr = getLocalDateString(date);
-                                const scheduleData = schedule[dateStr];
-                                
+                                let scheduleData = schedule[dateStr];
+                                // Inject F\n9h if previous day was a night shift (X or D starting at 17h)
+                                if (!scheduleData) {
+                                    const prevDate = new Date(date);
+                                    prevDate.setDate(prevDate.getDate() - 1);
+                                    const prevDateStr = getLocalDateString(prevDate);
+                                    const prevDayData = schedule[prevDateStr];
+                                    if (prevDayData && prevDayData.is_night_shift) {
+                                        // Use the actual end time from the previous day's data, default to 09:00
+                                        const endTime = prevDayData.end_time || '09:00';
+                                        scheduleData = { activity_type: 'F', end_time: endTime };
+                                    }
+                                }
                                 if (scheduleData) {
                                     // Exclude M (Maladie) and V (Vacances) from totals
                                     const activityType = scheduleData.activity_type;
@@ -3586,13 +3613,11 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                                         totalDays++;
                                         // Add hours, handling different activity types with safer fallback
                                         let hours = 8; // Default hours
-                                        
                                         if (scheduleData.hours_worked && !isNaN(scheduleData.hours_worked)) {
                                             hours = scheduleData.hours_worked;
                                         } else if (scheduleData.start_time && scheduleData.end_time) {
                                             hours = calculateHours(scheduleData.start_time, scheduleData.end_time);
                                         }
-                                        
                                         totalHours += hours;
                                     }
                                 }
@@ -3610,7 +3635,20 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                                     const dateStr = getLocalDateString(date);
                                     const dayOfWeek = date.getDay();
                                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                                    const scheduleData = schedule[dateStr];
+                                    let scheduleData = schedule[dateStr];
+                                    
+                                    // Inject F\n9h if previous day was a night shift (X or D starting at 17h)
+                                    if (!scheduleData) {
+                                        const prevDate = new Date(date);
+                                        prevDate.setDate(prevDate.getDate() - 1);
+                                        const prevDateStr = getLocalDateString(prevDate);
+                                        const prevDayData = schedule[prevDateStr];
+                                        if (prevDayData && prevDayData.is_night_shift) {
+                                            // Use the actual end time from the previous day's data, default to 09:00
+                                            const endTime = prevDayData.end_time || '09:00';
+                                            scheduleData = { activity_type: 'F', end_time: endTime };
+                                        }
+                                    }
                                     
                                     return `
                                         <td class="px-2 py-3 text-center ${isWeekend ? 'bg-gray-700' : 'bg-gray-800'}">
@@ -3974,6 +4012,14 @@ function formatScheduleDisplay(scheduleData) {
             return 'D<br>17h';
             
         case 'X':
+            // Check if this is a late start shift (should show as D\n17h format)
+            if (scheduleData.start_time) {
+                const startHour = parseInt(scheduleData.start_time.split(':')[0]);
+                // If start time is after 15:00 (3 PM), show as D\n{hour}h
+                if (startHour >= 15) {
+                    return `D<br>${startHour}h`;
+                }
+            }
             return 'X'; // Standard garde
             
         case 'S':
@@ -4473,43 +4519,11 @@ function loadCalendarForMonth(year, month, employeeId) {
     const employee = employees.find(emp => emp.id === employeeId);
     if (!employee) return;
     
-    // Get all weeks that overlap with this month
-    const firstDayOfMonth = new Date(year, month, 1);
-    const lastDayOfMonth = new Date(year, month + 1, 0);
-    
-    // Calculate all weeks we need to fetch
-    const weeks = [];
-    let currentWeekStart = new Date(firstDayOfMonth);
-    currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Go to Sunday
-    
-    while (currentWeekStart <= lastDayOfMonth) {
-        weeks.push(new Date(currentWeekStart));
-        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-    }
-    
-    // Fetch data for all weeks and combine
-    const weekPromises = weeks.map(weekStart => {
-        const weekDate = weekStart.toISOString().split('T')[0];
-        return fetch(`http://127.0.0.1:5001/api/schedule/weekly?date=${weekDate}`)
-            .then(response => response.json())
-            .then(weeklyData => {
-                const employeeData = weeklyData.find(w => w.Name === employee.name);
-                return { weekStart, employeeData };
-            });
-    });
-    
-    Promise.all(weekPromises)
-        .then(weekResults => {
-            // Combine all weeks into a single calendar data object
-            let calendarData = {};
-            
-            weekResults.forEach(({ weekStart, employeeData }) => {
-                if (employeeData) {
-                    const weekCalendarData = convertWeeklyToCalendarData(employeeData, weekStart, month + 1);
-                    calendarData = { ...calendarData, ...weekCalendarData };
-                }
-            });
-            
+    // Use the dedicated calendar API that includes is_night_shift field
+    fetch(`http://127.0.0.1:5001/api/workers/${employeeId}/calendar?year=${year}&month=${month + 1}`)
+        .then(response => response.json())
+        .then(calendarData => {
+            console.log(`Calendar data received for ${year}-${month + 1}:`, calendarData);
             generateEmployeeCalendarForMonth(calendarData, year, month);
         })
         .catch(error => {
@@ -4556,7 +4570,7 @@ function generateEmployeeCalendarForMonth(calendarData, year, month) {
     // Add days of the month with new layout design
     for (let day = 1; day <= daysInMonth; day++) {
         const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayData = calendarData[dateKey];
+        let dayData = calendarData[dateKey];
         
         // Calculate grid position for the first day of the month
         const dayOfWeek = new Date(year, month, day).getDay();
@@ -4565,6 +4579,18 @@ function generateEmployeeCalendarForMonth(calendarData, year, month) {
         let dayClass = `calendar-day h-16 border border-gray-300 dark:border-gray-500 rounded relative cursor-pointer transition-colors ${gridColumnStart}`;
         let hasActivity = false;
         let activityType = '';
+        
+        // Inject F\n9h if previous day was a night shift (exactly like team schedule)
+        if (!dayData) {
+            const prevDate = new Date(year, month, day - 1);
+            const prevDateKey = prevDate.toISOString().split('T')[0];
+            const prevDayData = calendarData[prevDateKey];
+            if (prevDayData && prevDayData.is_night_shift) {
+                // Use the actual end time from the previous day's data, default to 09:00
+                const endTime = prevDayData.end_time || '09:00';
+                dayData = { activity_type: 'F', end_time: endTime };
+            }
+        }
         
         // Check if there's schedule data for this day
         if (dayData && dayData.activity_type) {
@@ -4590,11 +4616,12 @@ function generateEmployeeCalendarForMonth(calendarData, year, month) {
         // Add activity indicator in center if there's an activity
         if (hasActivity && activityType) {
             const activityColor = getActivityTypeColor(activityType);
+            const formattedActivity = formatScheduleDisplay(dayData);
             dayContent += `
                 <!-- Activity type in center with background color -->
                 <div class="absolute inset-2 flex items-center justify-center">
                     <div class="${activityColor} text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
-                        ${activityType}
+                        ${formattedActivity}
                     </div>
                 </div>
             `;
