@@ -1,0 +1,1073 @@
+/* Custom styles for TimePlanner application */
+
+/* Fixed sidebar and main content layout */
+body {
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.fixed-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+}
+
+.main-content {
+    margin-left: 16rem; /* 64 * 0.25rem = 16rem for w-64 */
+    height: 100vh;
+    overflow: hidden; /* Hide main content scrollbar - only table containers should scroll */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Fix export button positioning */
+.fixed-export-bar {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+/* Basic utility classes */
+.hidden {
+    display: none !important;
+}
+
+/* Remove bottom margin/padding from views */
+.view {
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Remove bottom margin/padding from employees view */
+#view-employees {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+#view-employees .flex-1 {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Schedule view specific fixes */
+#view-schedules {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#view-schedules .flex-1 {
+    flex: 1;
+    min-height: 0; /* Important for flexbox */
+}
+
+/* Table container improvements */
+.table-container {
+    height: calc(100vh - 200px); /* Adjust based on header height */
+    overflow-y: auto;
+    margin-bottom: 0;
+}
+
+/* Navigation button styling */
+.nav-button.active {
+    background-color: #3b82f6; /* blue-500 */
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.nav-button:hover {
+    background-color: #374151; /* gray-700 */
+    transform: translateX(2px);
+    transition: all 0.2s ease;
+}
+
+/* Table hover effects */
+.hover\:bg-gray-750:hover {
+    background-color: #4a5568;
+}
+
+/* Sticky table headers */
+.sticky {
+    position: sticky;
+    z-index: 20;
+}
+
+/* Enhanced sticky table headers for schedule table */
+thead.sticky {
+    position: sticky;
+    top: 0;
+}
+
+/* Multiple shifts styling */
+.shift-entry {
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background-color: #374151;
+}
+
+.shift-entry:first-child {
+    border-color: #3b82f6;
+}
+
+.shift-entry h4 {
+    color: #60a5fa;
+}
+
+/* Time conflict warning */
+.time-conflict {
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+}
+
+/* Modal improvements for multiple shifts */
+#dayScheduleModal .bg-gray-800 {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+#shiftsContainer {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+/* General styles */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #6b7280 #374151;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Table container specific styles */
+.table-container {
+    max-height: calc(100vh - 240px); /* Adjust based on header and footer heights */
+    overflow-y: auto;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #6b7280 #374151;
+}
+
+/* Employee table container specific height */
+.view-employees .table-container {
+    max-height: calc(100vh - 180px); /* Reduced to account for removed bottom padding */
+    margin-bottom: 0;
+}
+
+/* Schedule table container specific height */
+.view-schedules .table-container {
+    max-height: calc(100vh - 280px); /* Account for export button */
+}
+
+/* Ensure table body has enough content to scroll */
+.table-container table {
+    min-width: 100%;
+}
+
+.table-container tbody {
+    min-height: 500px; /* Ensure there's enough content to trigger scrollbars */
+}
+
+/* Ensure table headers stay fixed during scroll */
+.schedule-table thead, .employee-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    background-color: #374151;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.schedule-table thead th, .employee-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #374151; /* gray-700 */
+    border-bottom: 2px solid #4b5563; /* gray-600 */
+}
+
+/* Force scrollbars on main container divs */
+.flex-1.overflow-y-auto.overflow-x-auto,
+.flex-1.p-8.overflow-y-auto.overflow-x-auto {
+    scrollbar-width: thin !important;
+    scrollbar-color: #6b7280 #374151 !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+}
+
+/* Utility class to force visible scrollbars */
+.force-scrollbar {
+    overflow-y: scroll !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #6b7280 #374151 !important;
+}
+
+.force-scrollbar::-webkit-scrollbar {
+    width: 14px !important;
+    height: 14px !important;
+    display: block !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-track {
+    background: #374151 !important;
+    border-radius: 8px !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-thumb {
+    background: #6b7280 !important;
+    border-radius: 8px !important;
+    border: 2px solid #374151 !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af !important;
+}
+
+/* Custom scrollbar - Force visibility */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #6b7280 #374151;
+}
+
+/* Force scrollbars to be visible */
+.table-container,
+.overflow-y-auto,
+.overflow-x-auto {
+    scrollbar-width: thin !important;
+    scrollbar-color: #6b7280 #374151 !important;
+}
+
+/* WebKit scrollbar styles - force visibility */
+.table-container::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
+    width: 14px !important;
+    height: 14px !important;
+    display: block !important;
+}
+
+.table-container::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: #374151 !important;
+    border-radius: 8px !important;
+}
+
+.table-container::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #6b7280 !important;
+    border-radius: 8px !important;
+    border: 2px solid #374151 !important;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af !important;
+}
+
+.table-container::-webkit-scrollbar-corner,
+.overflow-y-auto::-webkit-scrollbar-corner,
+.overflow-x-auto::-webkit-scrollbar-corner {
+    background: #374151 !important;
+}
+
+/* General scrollbar styles */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: #374151;
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 6px;
+    border: 2px solid #374151;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+::-webkit-scrollbar-corner {
+    background: #374151;
+}
+
+/* Button animations */
+button {
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* Input focus styling */
+input:focus, select:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Table cell alignment improvements */
+table td {
+    vertical-align: middle;
+}
+
+/* Status badge styling */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Loading animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.fa-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Dark mode enhancements */
+.dark {
+    --tw-bg-opacity: 1;
+    background-color: rgba(17, 24, 39, var(--tw-bg-opacity));
+}
+
+/* Light mode styles */
+body:not(.dark) {
+    background-color: #f9fafb !important;
+    color: #111827 !important;
+}
+
+/* Light mode sidebar */
+body:not(.dark) .fixed-sidebar {
+    background-color: #ffffff !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Light mode sidebar header */
+body:not(.dark) .fixed-sidebar .border-b {
+    border-color: #e5e7eb !important;
+}
+
+/* Light mode sidebar text */
+body:not(.dark) .fixed-sidebar h1 {
+    color: #111827 !important;
+}
+
+/* Light mode nav buttons */
+body:not(.dark) .nav-button {
+    color: #374151 !important;
+}
+
+body:not(.dark) .nav-button:hover {
+    background-color: #f3f4f6 !important;
+}
+
+body:not(.dark) .nav-button.active {
+    background-color: #3b82f6 !important;
+    color: white !important;
+}
+
+/* Light mode main content */
+body:not(.dark) .main-content {
+    background-color: #f9fafb !important;
+}
+
+/* Light mode tables */
+body:not(.dark) table {
+    background-color: #ffffff !important;
+}
+
+body:not(.dark) th {
+    background-color: #f9fafb !important;
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+}
+
+body:not(.dark) td {
+    color: #374151 !important;
+    border-color: #e5e7eb !important;
+}
+
+body:not(.dark) tr:hover {
+    background-color: #f9fafb !important;
+}
+
+/* Light mode buttons */
+body:not(.dark) .bg-blue-600 {
+    background-color: #3b82f6 !important;
+}
+
+body:not(.dark) .bg-green-600 {
+    background-color: #10b981 !important;
+}
+
+body:not(.dark) .bg-orange-600 {
+    background-color: #f59e0b !important;
+}
+
+body:not(.dark) .bg-red-600 {
+    background-color: #ef4444 !important;
+}
+
+/* Light mode modals */
+body:not(.dark) .modal .bg-gray-800 {
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb;
+}
+
+body:not(.dark) .modal h2, 
+body:not(.dark) .modal h3,
+body:not(.dark) .modal label,
+body:not(.dark) .modal p {
+    color: #111827 !important;
+}
+
+/* Light mode form inputs */
+body:not(.dark) input, 
+body:not(.dark) select, 
+body:not(.dark) textarea {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+}
+
+body:not(.dark) input:focus, 
+body:not(.dark) select:focus, 
+body:not(.dark) textarea:focus {
+    border-color: #3b82f6 !important;
+}
+
+/* Light mode dark mode toggle area */
+body:not(.dark) .fixed-sidebar .border-t {
+    border-color: #e5e7eb !important;
+}
+
+body:not(.dark) .fixed-sidebar .text-gray-300 {
+    color: #6b7280 !important;
+}
+
+/* Light mode calendar */
+body:not(.dark) .calendar-grid {
+    background-color: #ffffff !important;
+}
+
+body:not(.dark) .calendar-day {
+    border-color: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+body:not(.dark) .calendar-day:hover {
+    background-color: #f3f4f6 !important;
+}
+
+/* Light mode activity type backgrounds - preserve colors */
+body:not(.dark) .bg-red-600 {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+body:not(.dark) .bg-blue-600 {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+body:not(.dark) .bg-yellow-600 {
+    background-color: #ca8a04 !important;
+    color: #ffffff !important;
+}
+
+body:not(.dark) .bg-green-600 {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+}
+
+/* Light mode text colors */
+body:not(.dark) .text-white {
+    color: #111827 !important;
+}
+
+/* Light mode total column - keep white text on dark background */
+body:not(.dark) .bg-gray-600 .text-white,
+body:not(.dark) td.bg-gray-600 .text-white,
+body:not(.dark) .bg-gray-600 .text-sm,
+body:not(.dark) .bg-gray-600 .text-xs,
+body:not(.dark) .bg-gray-600 div,
+body:not(.dark) td.bg-gray-600 div {
+    color: #ffffff !important;
+}
+
+/* Ensure total column background stays dark in light mode */
+body:not(.dark) .bg-gray-600 {
+    background-color: #4b5563 !important;
+}
+
+/* Calendar day number styling for light mode */
+body:not(.dark) .calendar-day-number {
+    color: #000000 !important; /* Black text for day numbers in light mode */
+}
+
+/* Calendar day background - white in light mode */
+body:not(.dark) .calendar-day {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+}
+
+/* Calendar day names header - white text in light mode */
+body:not(.dark) .calendar-day-header,
+body:not(.dark) .calendar-header th,
+body:not(.dark) .bg-gray-700,
+body:not(.dark) .bg-gray-600 .text-gray-300,
+body:not(.dark) .text-gray-300 {
+    color: #ffffff !important;
+}
+
+/* Force white text for day names grid specifically */
+body:not(.dark) .grid.grid-cols-7.gap-1.mb-2 > div {
+    color: #ffffff !important;
+}
+
+/* More specific targeting for day names */
+body:not(.dark) .bg-gray-600.rounded {
+    color: #ffffff !important;
+}
+
+/* Ultra-specific targeting for day names with higher specificity */
+body:not(.dark) div.text-center.font-semibold.text-gray-300.py-3.bg-gray-600.rounded {
+    color: #ffffff !important;
+}
+
+/* Alternative approach - target all children of the day names grid */
+body:not(.dark) .grid.grid-cols-7 .bg-gray-600 {
+    color: #ffffff !important;
+}
+
+/* Calendar day names background - keep dark in light mode */
+body:not(.dark) .bg-gray-600 {
+    background-color: #4b5563 !important;
+}
+
+/* Calendar container background - keep dark in light mode */
+body:not(.dark) .bg-gray-700 {
+    background-color: #374151 !important;
+}
+
+/* Ensure calendar day cells have white background in light mode */
+body:not(.dark) .bg-gray-800 {
+    background-color: #ffffff !important;
+}
+
+/* Calendar activity type backgrounds - preserve colors in light mode */
+body:not(.dark) .calendar-day .bg-red-600 {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+body:not(.dark) .calendar-day .bg-blue-600 {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+body:not(.dark) .calendar-day .bg-yellow-600 {
+    background-color: #ca8a04 !important;
+    color: #ffffff !important;
+}
+
+body:not(.dark) .calendar-day .bg-green-600 {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+}
+
+/* Today indicator - keep blue background and white text */
+body:not(.dark) .calendar-day.bg-blue-600 .calendar-day-number {
+    color: #ffffff !important;
+}
+
+body:not(.dark) .text-gray-200 {
+    color: #374151 !important;
+}
+
+body:not(.dark) .text-gray-300 {
+    color: #6b7280 !important;
+}
+
+body:not(.dark) .text-gray-400 {
+    color: #9ca3af !important;
+}
+
+/* Light mode backgrounds */
+body:not(.dark) .bg-gray-700 {
+    background-color: #f3f4f6 !important;
+}
+
+body:not(.dark) .bg-gray-800 {
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb;
+}
+
+body:not(.dark) .bg-gray-750 {
+    background-color: #f9fafb !important;
+}
+
+/* Light mode status badges */
+body:not(.dark) .bg-blue-100 {
+    background-color: #dbeafe !important;
+}
+
+body:not(.dark) .text-blue-800 {
+    color: #1e40af !important;
+}
+
+body:not(.dark) .bg-orange-100 {
+    background-color: #fed7aa !important;
+}
+
+body:not(.dark) .text-orange-800 {
+    color: #9a3412 !important;
+}
+
+/* Light mode header gradient */
+body:not(.dark) .header-gradient {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%) !important;
+    border-color: #d1d5db !important;
+}
+
+body:not(.dark) .header-gradient h2 {
+    color: #111827 !important;
+}
+
+body:not(.dark) .header-gradient .text-blue-400 {
+    color: #3b82f6 !important;
+}
+
+/* Light mode reports section specific styles */
+body:not(.dark) #view-reports .header-gradient {
+    background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%) !important;
+    border-color: #e5e7eb !important;
+}
+
+body:not(.dark) #view-reports .header-gradient h2 {
+    color: #111827 !important;
+}
+
+body:not(.dark) #view-reports .header-gradient .text-blue-400 {
+    color: #3b82f6 !important;
+}
+
+body:not(.dark) #view-reports .header-gradient i {
+    color: #3b82f6 !important;
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 50;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+/* Modern card styling */
+.card {
+    background: linear-gradient(145deg, #374151, #1f2937);
+    border: 1px solid #4b5563;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Header gradient */
+.header-gradient {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+}
+
+/* Fixed export button styling */
+.fixed-export-bar {
+    position: sticky;
+    bottom: 0;
+    background: rgba(31, 41, 55, 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid #4b5563;
+}
+
+/* Modal enhancements */
+.bg-gray-550:hover {
+    background-color: #525f6b;
+}
+
+/* Enhanced checkbox styling */
+input[type="checkbox"]:checked {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+/* Time input styling */
+input[type="time"]:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: scale(1.02);
+}
+
+/* Modal backdrop blur effect */
+.modal-backdrop {
+    backdrop-filter: blur(4px);
+}
+
+/* Gradient button animations */
+.bg-gradient-to-r:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Day status badges */
+.day-status-work {
+    background: linear-gradient(45deg, #10b981, #059669);
+    animation: pulse 2s infinite;
+}
+
+.day-status-rest {
+    background: linear-gradient(45deg, #6b7280, #4b5563);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Enhanced form field focus states */
+.form-field:focus-within {
+    transform: scale(1.01);
+    transition: transform 0.2s ease;
+}
+
+/* Modal slide-in animation */
+.modal-enter {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+/* Calendar grid positioning utilities */
+.col-start-1 { grid-column-start: 1; }
+.col-start-2 { grid-column-start: 2; }
+.col-start-3 { grid-column-start: 3; }
+.col-start-4 { grid-column-start: 4; }
+.col-start-5 { grid-column-start: 5; }
+.col-start-6 { grid-column-start: 6; }
+.col-start-7 { grid-column-start: 7; }
+
+/* Calendar day styling improvements */
+.calendar-day {
+    position: relative;
+    overflow: hidden;
+    min-height: 4rem;
+    height: 4rem;
+    transition: all 0.2s ease;
+}
+
+.calendar-day:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Calendar day number positioning */
+.calendar-day-number {
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+/* Activity type indicator styling */
+.calendar-day .activity-indicator {
+    max-width: calc(100% - 1rem);
+    max-height: calc(100% - 1.5rem);
+}
+
+.calendar-day .activity-icon {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendar-day .night-shift-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: 9px;
+    background: rgba(139, 69, 19, 0.8);
+    color: #fbbf24;
+    text-align: center;
+    padding: 1px;
+}
+
+.calendar-day .hours-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: 9px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    text-align: center;
+    padding: 1px;
+}
+
+/* Time picker improvements */
+input[type="time"] {
+    position: relative;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+    background: url('data:image/svg+xml;charset=utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="%23ffffff" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path fill="%23ffffff" d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>') no-repeat;
+    cursor: pointer;
+}
+
+/* Night shift styling */
+.night-shift-info {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Activity type badge styling */
+.activity-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 2px;
+}
+
+.activity-badge.work { background-color: #10b981; color: white; }
+.activity-badge.overtime { background-color: #f59e0b; color: white; }
+.activity-badge.night { background-color: #8b5cf6; color: white; }
+.activity-badge.maintenance { background-color: #6b7280; color: white; }
+.activity-badge.training { background-color: #3b82f6; color: white; }
+.activity-badge.meeting { background-color: #ef4444; color: white; }
+
+/* Enhanced modal animations */
+.modal-backdrop {
+    animation: modalBackdropFadeIn 0.3s ease-out;
+}
+
+.modal-enter {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalBackdropFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+    from { 
+        opacity: 0; 
+        transform: scale(0.95) translateY(-20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1) translateY(0); 
+    }
+}
+
+/* Validation warning styling */
+.time-validation-warning {
+    animation: warningPulse 0.5s ease-in-out;
+}
+
+@keyframes warningPulse {
+    0% { background-color: rgba(251, 191, 36, 0.1); }
+    50% { background-color: rgba(251, 191, 36, 0.3); }
+    100% { background-color: rgba(251, 191, 36, 0.1); }
+}
+
+/* Teams Management Styles */
+.team-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.team-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.team-member-card {
+    transition: all 0.2s ease;
+}
+
+.team-member-card:hover {
+    background-color: #4b5563;
+    transform: translateX(2px);
+}
+
+.team-color-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid #374151;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.team-shift-card {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border: 1px solid #6b7280;
+    transition: all 0.2s ease;
+}
+
+.team-shift-card:hover {
+    border-color: #3b82f6;
+    transform: translateX(2px);
+}
+
+/* Team modal animations */
+.team-modal-enter {
+    animation: teamModalSlideIn 0.3s ease-out;
+}
+
+@keyframes teamModalSlideIn {
+    from { 
+        opacity: 0; 
+        transform: scale(0.9) translateY(-30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1) translateY(0); 
+    }
+}
+
+/* Team grid responsive */
+@media (max-width: 768px) {
+    .teams-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .teams-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1025px) {
+    .teams-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Light mode teams styles */
+body:not(.dark) .team-card {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+}
+
+body:not(.dark) .team-card:hover {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+body:not(.dark) .team-member-card {
+    background-color: #f3f4f6 !important;
+}
+
+body:not(.dark) .team-member-card:hover {
+    background-color: #e5e7eb !important;
+}
+
+body:not(.dark) .team-shift-card {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%) !important;
+    border-color: #d1d5db !important;
+}
+
+body:not(.dark) .team-shift-card:hover {
+    border-color: #3b82f6 !important;
+}
+
+/* =====================================================
+   MODAL ANIMATIONS
+   ===================================================== */
+
+/* Fade in animation for modals */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Custom confirmation modal styles */
+#deleteConfirmationModal .bg-gray-800 {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Pulse animation for warning icons */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Hover effects for confirmation buttons */
+#deleteConfirmationModal button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}

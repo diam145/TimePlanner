@@ -1,0 +1,27 @@
+<!-- Custom Confirmation Modal -->
+<div id="confirmationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+        <!-- Modal Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+            <div class="flex items-center space-x-3">
+                <i id="confirmIcon" class="fa-solid fa-question-circle text-2xl text-white"></i>
+                <h3 id="confirmTitle" class="text-xl font-bold text-white">Confirmation</h3>
+            </div>
+        </div>
+        
+        <!-- Modal Content -->
+        <div class="px-6 py-4">
+            <p id="confirmMessage" class="text-gray-300 mb-6">Êtes-vous sûr de vouloir effectuer cette action?</p>
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-3">
+                <button id="confirmCancel" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                    Annuler
+                </button>
+                <button id="confirmOk" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                    Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

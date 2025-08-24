@@ -1,0 +1,15 @@
+{
+  "name": "time-planner-ui",
+  "version": "1.0.0",
+  "description": "Time Planner Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.3.3"
+  }
+}

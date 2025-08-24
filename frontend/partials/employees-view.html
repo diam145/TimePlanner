@@ -1,0 +1,54 @@
+<!-- Employees Management View -->
+<div id="view-employees" class="view hidden flex-1 flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="bg-gray-800 px-8 py-6 border-b border-gray-700">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-users text-2xl text-blue-400"></i>
+                <h2 class="text-2xl font-bold text-white">Gestion des Employés</h2>
+            </div>
+            <div class="flex items-center space-x-4">
+                <!-- Search Bar -->
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="employeeSearch"
+                        placeholder="Rechercher par nom ou ID" 
+                        class="bg-gray-700 text-white pl-10 pr-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none w-64"
+                    >
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+                </div>
+                <!-- Filter Dropdown -->
+                <select id="statusFilter" class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                    <option value="">Tous</option>
+                    <option value="employee">Employé</option>
+                    <option value="external">Externe</option>
+                </select>
+                <!-- Apply Button -->
+                <button id="applyEmployeeFilter" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fa-solid fa-filter mr-2"></i>Appliquer
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table Container -->
+    <div class="flex-1 pt-4 px-4 pb-0">
+        <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden table-container force-scrollbar">
+            <table class="w-full employee-table">
+                <thead class="bg-gray-700 sticky top-0 z-30">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">ID</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Nom</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Statut</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Horaires</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="workers-table-body" class="divide-y divide-gray-700">
+                    <!-- Employee rows will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

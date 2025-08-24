@@ -1,0 +1,51 @@
+<!-- Add Team Member Modal -->
+<div id="addMemberModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+        <!-- Modal Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-user-plus text-2xl text-white"></i>
+                    <h3 class="text-xl font-bold text-white">Ajouter un Membre</h3>
+                </div>
+                <button onclick="closeAddMemberModal()" class="text-white hover:text-gray-200 transition-colors">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Modal Content -->
+        <form id="addMemberForm" class="p-6">
+            <div class="space-y-4">
+                <!-- Employee Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Sélectionner un employé</label>
+                    <select id="memberSelect" required class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                        <option value="">Choisir un employé...</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+                
+                <!-- Role in Team -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Rôle dans l'équipe</label>
+                    <select id="memberRole" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                        <option value="member">Membre</option>
+                        <option value="leader">Chef d'équipe</option>
+                        <option value="assistant">Assistant</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-600 mt-6">
+                <button type="button" onclick="closeAddMemberModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                    Annuler
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                    Ajouter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

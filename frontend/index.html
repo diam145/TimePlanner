@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>TimePlanner - Gestion des Horaires et Employés</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body class="bg-gray-900 text-gray-100 dark">
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-gray-800 shadow-lg flex flex-col fixed h-full z-10 fixed-sidebar">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-700">
+                <h1 class="text-xl font-bold text-white flex items-center">
+                    <i class="fa-solid fa-file-lines mr-3 text-blue-400"></i>
+                    Navigation
+                </h1>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="flex-1 p-4 space-y-2">
+                <button data-view="schedules" class="nav-button w-full flex items-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-clock mr-3 w-5"></i>
+                    <span>Gestion des Horaires</span>
+                </button>
+                <button data-view="employees" class="nav-button w-full flex items-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-users mr-3 w-5"></i>
+                    <span>Gestion des Employés</span>
+                </button>
+                <button data-view="teams" class="nav-button w-full flex items-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-user-group mr-3 w-5"></i>
+                    <span>Gestion des Équipes</span>
+                </button>
+                <button data-view="team-schedules" class="nav-button w-full flex items-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-calendar-days mr-3 w-5"></i>
+                    <span>Horaires des Équipes</span>
+                </button>
+                <button data-view="reports" class="nav-button w-full flex items-center p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-chart-bar mr-3 w-5"></i>
+                    <span>Rapports</span>
+                </button>
+            </nav>
+            
+            <!-- Dark Mode Toggle -->
+            <div class="p-4 border-t border-gray-700">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" id="darkModeToggle" class="w-5 h-5 rounded">
+                    <span class="text-sm text-gray-300">Mode Sombre</span>
+                </label>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col bg-gray-900 ml-64 main-content">
+            <!-- Welcome View -->
+            <div id="view-welcome" class="view hidden flex-1 flex items-center justify-center">
+                <div class="text-center">
+                    <i class="fa-solid fa-clock text-8xl text-blue-400 mb-6"></i>
+                    <h1 class="text-5xl font-bold text-white mb-4">TimePlanner</h1>
+                    <p class="text-xl text-gray-400">Sélectionnez une option dans la barre latérale pour commencer.</p>
+                </div>
+            </div>
+
+            <!-- Employees Management View -->
+            <div id="view-employees" class="view hidden flex-1 flex flex-col overflow-hidden">
+                <!-- Header -->
+                <div class="bg-gray-800 px-8 py-6 border-b border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-users text-2xl text-blue-400"></i>
+                            <h2 class="text-2xl font-bold text-white">Gestion des Employés</h2>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <!-- Search Bar -->
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="employeeSearch"
+                                    placeholder="Rechercher par nom ou Numero employe" 
+                                    class="bg-gray-700 text-white pl-10 pr-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none w-64"
+                                >
+                                <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                            <!-- Filter Dropdown -->
+                            <select id="statusFilter" class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                                <option value="">Tous</option>
+                                <option value="employee">Employé</option>
+                                <option value="external">Externe</option>
+                            </select>
+                            <!-- Apply Button -->
+                            <button id="applyEmployeeFilter" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                <i class="fa-solid fa-filter mr-2"></i>Appliquer
+                            </button>
+                            <!-- Clear Filters Button -->
+                            <button id="clearEmployeeFilters" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                <i class="fa-solid fa-times mr-2"></i>Effacer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table Container -->
+                <div class="flex-1 pt-4 px-4 pb-0">
+                    <!-- Results Counter -->
+                    <div class="mb-3 px-2">
+                        <span id="employeesResultsCount" class="text-sm text-gray-400"></span>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden table-container force-scrollbar">
+                        <table class="w-full employee-table">
+                            <thead class="bg-gray-700 sticky top-0 z-30">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">ID</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Nom</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Numéro d'employé</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Téléphone</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Statut</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Horaires</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workers-table-body" class="divide-y divide-gray-700">
+                                <!-- Employee rows will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Fixed Add Employee Button at Bottom -->
+                <div class="bg-gray-800 border-t border-gray-700 p-6 fixed-export-bar">
+                    <button onclick="openAddEmployeeModal()" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-8 py-3 rounded-lg transition-all duration-200 flex items-center text-lg font-medium shadow-lg hover:shadow-xl">
+                        <i class="fa-solid fa-user-plus mr-3"></i>
+                        Ajouter un nouvel employé
+                    </button>
+                </div>
+            </div>
+
+            <!-- Schedules Management View -->
+            <div id="view-schedules" class="view hidden flex-1 flex flex-col overflow-hidden">
+                <!-- Header -->
+                <div class="bg-gray-800 px-8 py-6 border-b border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-clock text-2xl text-blue-400"></i>
+                            <h2 class="text-2xl font-bold text-white">Gestion des Horaires</h2>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <!-- Week Selector -->
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-calendar text-red-400"></i>
+                                <label class="text-gray-300 text-sm font-medium">Sélectionnez la semaine:</label>
+                                <input 
+                                    type="date" 
+                                    id="weekSelector"
+                                    class="bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table Container -->
+                <div class="flex-1 px-4 pt-4">
+                    <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden table-container force-scrollbar">
+                        <table class="w-full schedule-table">
+                            <thead class="bg-gray-700 sticky top-0 z-30">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200 uppercase tracking-wider">Name</th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">
+                                        <div>Dimanche</div>
+                                        <div id="sunday-date" class="text-xs font-normal text-gray-400"></div>
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">
+                                        <div>Lundi</div>
+                                        <div id="monday-date" class="text-xs font-normal text-gray-400"></div>
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">
+                                        <div>Mardi</div>
+                                        <div id="tuesday-date" class="text-xs font-normal text-gray-400"></div>
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">
+                                        <div>Mercredi</div>
+                                        <div id="wednesday-date" class="text-xs font-normal text-gray-400"></div>
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">
+                                        <div>Jeudi</div>
+                                        <div id="thursday-date" class="text-xs font-normal text-gray-400"></div>
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">
+                                        <div>Vendredi</div>
+                                        <div id="friday-date" class="text-xs font-normal text-gray-400"></div>
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">
+                                        <div>Samedi</div>
+                                        <div id="saturday-date" class="text-xs font-normal text-gray-400"></div>
+                                    </th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200 uppercase tracking-wider">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedules-table-body" class="divide-y divide-gray-700">
+                                <!-- Schedule rows will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Fixed Export Button at Bottom -->
+                <div class="bg-gray-800 border-t border-gray-700 p-6 fixed-export-bar">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex flex-col">
+                            <label for="exportFormat" class="text-sm text-gray-400 mb-1">Format d'Export</label>
+                            <select id="exportFormat" class="bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded-lg">
+                                <option value="standard">Standard Excel</option>
+                                <option value="professional">Format Professionnel</option>
+                            </select>
+                        </div>
+                        <button id="exportExcel" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center text-lg font-medium">
+                            <i class="fa-solid fa-file-excel mr-3"></i>
+                            Exportez sur Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Schedules View -->
+            <div id="view-team-schedules" class="view hidden flex-1 flex flex-col">
+                <!-- Team Schedules Header -->
+                <div class="header-gradient p-6 border-b border-gray-600">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-calendar-days text-2xl text-green-400"></i>
+                            <h2 class="text-2xl font-bold text-white">Horaires des Équipes</h2>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center space-x-2">
+                                    <label for="teamScheduleStartDate" class="text-sm font-medium text-gray-300">Date de début:</label>
+                                    <input type="date" id="teamScheduleStartDate" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label for="teamScheduleEndDate" class="text-sm font-medium text-gray-300">Date de fin:</label>
+                                    <input type="date" id="teamScheduleEndDate" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                                </div>
+                            </div>
+                            <button id="refreshTeamSchedulesBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                                <i class="fa-solid fa-refresh"></i>
+                                <span>Actualiser</span>
+                            </button>
+                            <button id="exportTeamSchedulesBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                                <i class="fa-solid fa-file-excel"></i>
+                                <span>Exporter</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Schedules Content -->
+                <div class="flex-1 overflow-hidden">
+                    <div class="h-full overflow-y-auto p-6">
+                        <!-- Team Schedules Grid -->
+                        <div id="teamSchedulesGrid" class="space-y-6">
+                            <!-- Team schedule cards will be populated here -->
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="teamSchedulesEmpty" class="hidden text-center py-16">
+                            <i class="fa-solid fa-calendar-days text-6xl text-gray-500 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-400 mb-2">Aucun horaire d'équipe</h3>
+                            <p class="text-gray-500 mb-6">Les horaires d'équipe apparaîtront ici une fois générés.</p>
+                            <button onclick="showView('teams')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 mx-auto">
+                                <i class="fa-solid fa-user-group"></i>
+                                <span>Aller à la Gestion des Équipes</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports View -->
+            <div id="view-reports" class="view hidden flex-1 flex flex-col">
+                <!-- Reports Header -->
+                <div class="header-gradient p-6 border-b border-gray-600">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-chart-bar text-2xl text-blue-400"></i>
+                            <h2 class="text-2xl font-bold text-white">Gestion des Rapports</h2>
+                        </div>
+                        <button id="refreshReports" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                            <i class="fa-solid fa-refresh"></i>
+                            <span>Actualiser</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reports Content -->
+                <div class="flex-1 overflow-hidden">
+                    <div class="h-full overflow-y-auto p-6">
+                        <!-- Archive Files Section -->
+                        <div class="bg-gray-800 rounded-lg border border-gray-600 p-6">
+                            <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                                <i class="fa-solid fa-archive mr-2 text-blue-400"></i>
+                                Fichiers d'Archive
+                            </h3>
+                            
+                            <!-- Loading State -->
+                            <div id="reportsLoading" class="text-center py-8">
+                                <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-400 mb-2"></i>
+                                <p class="text-gray-400">Chargement des rapports...</p>
+                            </div>
+
+                            <!-- Reports Table -->
+                            <div id="reportsTableContainer" class="hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm">
+                                        <thead>
+                                            <tr class="bg-gray-700 border-b border-gray-600">
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                                    <i class="fa-solid fa-file-excel mr-2"></i>Nom du Fichier
+                                                </th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                                    <i class="fa-solid fa-calendar mr-2"></i>Date de Modification
+                                                </th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                                    <i class="fa-solid fa-hdd mr-2"></i>Taille
+                                                </th>
+                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                                    <i class="fa-solid fa-cog mr-2"></i>Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="reportsTableBody" class="divide-y divide-gray-600">
+                                            <!-- Reports will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div id="reportsEmpty" class="hidden text-center py-8">
+                                <i class="fa-solid fa-folder-open text-4xl text-gray-500 mb-4"></i>
+                                <p class="text-gray-400 text-lg">Aucun rapport trouvé</p>
+                                <p class="text-gray-500 text-sm mt-2">Exportez des rapports depuis la vue "Gestion des Horaires" pour les voir ici.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teams Management View -->
+            <div id="view-teams" class="view hidden flex-1 flex flex-col">
+                <!-- Teams Header -->
+                <div class="header-gradient p-6 border-b border-gray-600">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-user-group text-2xl text-blue-400"></i>
+                            <h2 class="text-2xl font-bold text-white">Gestion des Équipes</h2>
+                        </div>
+                        <button id="createTeamBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Créer Équipe</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Teams Content -->
+                <div class="flex-1 overflow-hidden">
+                    <div class="h-full overflow-y-auto p-6">
+                        <!-- Teams Grid -->
+                        <div id="teamsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Teams will be populated here -->
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="teamsEmpty" class="hidden text-center py-16">
+                            <i class="fa-solid fa-user-group text-6xl text-gray-500 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-400 mb-2">Aucune équipe créée</h3>
+                            <p class="text-gray-500 mb-6">Créez votre première équipe pour commencer à organiser vos employés.</p>
+                            <button onclick="openCreateTeamModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 mx-auto">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Créer ma première équipe</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Employee Schedule Modal -->
+    <div id="addScheduleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-calendar-plus text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Ajouter Horaire Employé</h3>
+                    </div>
+                    <button onclick="closeAddScheduleModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <form id="addScheduleForm" class="p-6" onsubmit="handleFormSubmit(event, 'schedule')">
+                <div class="space-y-6">
+                    <input type="hidden" id="employeeId" name="employeeId">
+                    
+                    <!-- Date Interval Section -->
+                    <div class="bg-gray-700 rounded-lg p-5">
+                        <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <i class="fa-solid fa-calendar-days text-blue-400 mr-2"></i>
+                            Période d'application
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">
+                                    <i class="fa-solid fa-play text-green-400 mr-1"></i>
+                                    Date de début
+                                </label>
+                                <input type="date" id="startDate" name="startDate" required 
+                                       class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg border border-gray-500 focus:border-blue-400 focus:outline-none transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">
+                                    <i class="fa-solid fa-stop text-red-400 mr-1"></i>
+                                    Date de fin
+                                </label>
+                                <input type="date" id="endDate" name="endDate" required 
+                                       class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg border border-gray-500 focus:border-blue-400 focus:outline-none transition-colors">
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-2">
+                            <i class="fa-solid fa-info-circle mr-1"></i>
+                            L'horaire sera répété chaque semaine durant cette période
+                        </p>
+                    </div>
+
+                    <!-- Weekly Schedule Section -->
+                    <div class="bg-gray-700 rounded-lg p-5">
+                        <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <i class="fa-solid fa-clock text-blue-400 mr-2"></i>
+                            Horaire hebdomadaire
+                        </h4>
+                        <div id="weeklySchedule" class="space-y-3">
+                            <!-- Days will be populated by JavaScript -->
+                        </div>
+                        <div class="mt-4 p-3 bg-blue-900 bg-opacity-30 rounded-lg border border-blue-600">
+                            <p class="text-blue-200 text-sm flex items-center">
+                                <i class="fa-solid fa-lightbulb mr-2"></i>
+                                Cochez les jours de travail et définissez les heures correspondantes
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Indisponibilité Section -->
+                    <div class="bg-gray-700 rounded-lg p-5">
+                        <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <i class="fa-solid fa-calendar-times text-red-400 mr-2"></i>
+                            Indisponibilité (optionnel)
+                        </h4>
+                        
+                        <!-- Toggle for unavailability -->
+                        <div class="mb-4">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" id="enableUnavailability" class="w-5 h-5 rounded bg-gray-600 border-gray-500 text-red-600 focus:ring-red-500 focus:ring-2">
+                                <span class="text-gray-300">Ajouter une période d'indisponibilité</span>
+                            </label>
+                        </div>
+
+                        <div id="unavailabilityFields" class="space-y-4 hidden">
+                            <!-- Type of unavailability -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">
+                                    <i class="fa-solid fa-list-ul text-red-400 mr-1"></i>
+                                    Type d'indisponibilité
+                                </label>
+                                <select id="unavailabilityType" name="unavailabilityType" 
+                                        class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg border border-gray-500 focus:border-red-400 focus:outline-none transition-colors">
+                                    <option value="">Sélectionner le type</option>
+                                    <option value="M">Maladie</option>
+                                    <option value="V">Vacances</option>
+                                </select>
+                            </div>
+
+                            <div class="p-3 bg-red-900 bg-opacity-30 rounded-lg border border-red-600">
+                                <p class="text-red-200 text-sm flex items-center">
+                                    <i class="fa-solid fa-info-circle mr-2"></i>
+                                    Utilisez les dates de début et fin ci-dessus pour définir la période d'indisponibilité
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-600">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center justify-center font-medium">
+                            <i class="fa-solid fa-plus mr-2"></i>
+                            Ajouter l'horaire
+                        </button>
+                        <button type="button" onclick="closeAddScheduleModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center font-medium">
+                            <i class="fa-solid fa-times mr-2"></i>
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employee Calendar Modal -->
+    <div id="employeeCalendarModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-calendar-user text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">
+                            Calendrier de <span id="employeeNameCalendar" class="text-purple-200"></span> (2025)
+                        </h3>
+                    </div>
+                    <button onclick="closeEmployeeCalendarModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="p-6">
+                <!-- Calendar Navigation -->
+                <div class="flex justify-between items-center mb-6 bg-gray-700 rounded-lg p-4">
+                    <button onclick="previousMonth()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
+                        <i class="fa-solid fa-chevron-left mr-2"></i>Mois Préc.
+                    </button>
+                    <h4 id="currentMonthYear" class="text-2xl font-bold text-white"></h4>
+                    <button onclick="nextMonth()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
+                        Mois Suiv.<i class="fa-solid fa-chevron-right ml-2"></i>
+                    </button>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div class="bg-gray-700 rounded-lg p-4">
+                    <div class="grid grid-cols-7 gap-1 mb-2">
+                        <div class="text-center font-semibold text-gray-300 py-3 bg-gray-600 rounded">Dim</div>
+                        <div class="text-center font-semibold text-gray-300 py-3 bg-gray-600 rounded">Lun</div>
+                        <div class="text-center font-semibold text-gray-300 py-3 bg-gray-600 rounded">Mar</div>
+                        <div class="text-center font-semibold text-gray-300 py-3 bg-gray-600 rounded">Mer</div>
+                        <div class="text-center font-semibold text-gray-300 py-3 bg-gray-600 rounded">Jeu</div>
+                        <div class="text-center font-semibold text-gray-300 py-3 bg-gray-600 rounded">Ven</div>
+                        <div class="text-center font-semibold text-gray-300 py-3 bg-gray-600 rounded">Sam</div>
+                    </div>
+                    <div id="calendarDays" class="grid grid-cols-7 gap-1">
+                        <!-- Calendar days will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Calendar Legend -->
+                <div class="mt-4 bg-gray-700 rounded-lg p-4">
+                    <h5 class="text-white font-semibold mb-3 flex items-center">
+                        <i class="fa-solid fa-info-circle text-blue-400 mr-2"></i>
+                        Légende
+                    </h5>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm mb-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-green-600 rounded flex items-center justify-center text-white text-xs font-bold">X</div>
+                            <span class="text-gray-300">Garde</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-green-600 rounded flex items-center justify-center text-white text-xs font-bold">S</div>
+                            <span class="text-gray-300">Soutien de jour</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-green-600 rounded flex items-center justify-center text-white text-xs font-bold">RP</div>
+                            <span class="text-gray-300">Rencontre Prénatale</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-purple-600 rounded"></div>
+                            <span class="text-gray-300">Équipe de Nuit</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-yellow-600 rounded flex items-center justify-center text-white text-xs font-bold">F</div>
+                            <span class="text-gray-300">Fin d'Équipe de Nuit</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-red-600 rounded flex items-center justify-center text-white text-xs font-bold">M</div>
+                            <span class="text-gray-300">Maladie</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">V</div>
+                            <span class="text-gray-300">Vacances</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-400 space-y-1">
+                        <div><strong>Symboles:</strong></div>
+                        <div>• <strong>X</strong> = Garde</div>
+                        <div>• <strong>S</strong> = Soutien de jour</div>
+                        <div>• <strong>RP</strong> = Rencontre Prénatale</div>
+                        <div>• <strong>F{heure}</strong> = Fin d'équipe de nuit (ex: F9h = fin à 9h)</div>
+                        <div>• <strong class="text-red-400">M</strong> = Maladie</div>
+                        <div>• <strong class="text-blue-400">V</strong> = Vacances</div>
+                        <div>• <em>Vide</em> = Repos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Schedule Modal -->
+    <div id="dayScheduleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-calendar-day text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">
+                            <span id="dayScheduleTitle"></span>
+                        </h3>
+                    </div>
+                    <button onclick="closeDayScheduleModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div id="dayScheduleContent" class="p-6">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Employee Info Modal -->
+    <div id="editEmployeeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-edit text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Modifier Employé</h3>
+                    </div>
+                    <button onclick="closeEditEmployeeModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <form id="editEmployeeForm" class="p-6">
+                <div class="space-y-5">
+                    <input type="hidden" id="editEmployeeId" name="employeeId">
+                    
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-user text-blue-400 mr-2"></i>
+                            Nom de l'employé
+                        </label>
+                        <input type="text" id="editEmployeeName" name="name" required 
+                               class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none transition-all duration-200"
+                               placeholder="Entrez le nom complet">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-id-card text-blue-400 mr-2"></i>
+                            Numéro d'employé
+                        </label>
+                        <input type="text" id="editEmployeeNumber" name="employee_number" required
+                               class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none transition-all duration-200"
+                               placeholder="Entrez le numéro d'employé">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-phone text-blue-400 mr-2"></i>
+                            Téléphone
+                        </label>
+                        <input type="tel" id="editEmployeePhone" name="phone_number"
+                               class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none transition-all duration-200"
+                               placeholder="(123) 456-7890">
+                    </div>
+
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-briefcase text-blue-400 mr-2"></i>
+                            Statut de l'employé
+                        </label>
+                        <select id="editEmployeeStatus" name="status" required 
+                                class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none transition-all duration-200">
+                            <option value="employee">Employé interne</option>
+                            <option value="external">Employé externe</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-600">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center justify-center font-medium">
+                            <i class="fa-solid fa-save mr-2"></i>
+                            Sauvegarder
+                        </button>
+                        <button type="button" onclick="closeEditEmployeeModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center font-medium">
+                            <i class="fa-solid fa-times mr-2"></i>
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Employee Confirmation Modal -->
+    <div id="deleteEmployeeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-trash-can text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Confirmer la suppression</h3>
+                    </div>
+                    <button onclick="closeDeleteEmployeeModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6">
+                <div class="text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                        <i class="fa-solid fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-medium text-white mb-2">Êtes-vous absolument sûr ?</h4>
+                    <p class="text-gray-300 mb-2">Vous êtes sur le point de supprimer l'employé :</p>
+                    <p class="text-xl font-semibold text-white mb-4" id="deleteEmployeeName">Nom de l'employé</p>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
+                        <div class="flex items-start">
+                            <i class="fa-solid fa-exclamation-triangle text-red-500 mt-0.5 mr-2"></i>
+                            <div class="text-sm text-red-700">
+                                <p class="font-medium">Cette action est irréversible !</p>
+                                <p>Toutes les données de cet employé, y compris ses horaires et son historique, seront définitivement perdues.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button type="button" onclick="closeDeleteEmployeeModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center font-medium">
+                        <i class="fa-solid fa-times mr-2"></i>
+                        Annuler
+                    </button>
+                    <button type="button" onclick="confirmDeleteEmployee()" class="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center justify-center font-medium">
+                        <i class="fa-solid fa-trash-can mr-2"></i>
+                        Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Employee Modal -->
+    <div id="addEmployeeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-plus text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Ajouter un nouvel employé</h3>
+                    </div>
+                    <button onclick="closeAddEmployeeModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <form id="addEmployeeForm" class="p-6">
+                <div class="space-y-5">
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-user text-green-400 mr-2"></i>
+                            Nom de l'employé
+                        </label>
+                        <input type="text" id="addEmployeeName" name="name" required 
+                               class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-green-400 focus:outline-none transition-all duration-200"
+                               placeholder="Entrez le nom complet">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-id-card text-green-400 mr-2"></i>
+                            Numéro d'employé
+                        </label>
+                        <input type="text" id="addEmployeeNumber" name="employee_number" required
+                               class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-green-400 focus:outline-none transition-all duration-200"
+                               placeholder="Entrez le numéro d'employé">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-phone text-green-400 mr-2"></i>
+                            Téléphone
+                        </label>
+                        <input type="tel" id="addEmployeePhone" name="phone_number"
+                               class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-green-400 focus:outline-none transition-all duration-200"
+                               placeholder="(123) 456-7890">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                            <i class="fa-solid fa-briefcase text-green-400 mr-2"></i>
+                            Statut de l'employé
+                        </label>
+                        <select id="addEmployeeStatus" name="status" required 
+                                class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-green-400 focus:outline-none transition-all duration-200">
+                            <option value="employee">Employé interne</option>
+                            <option value="external">Employé externe</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-600">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center justify-center font-medium">
+                            <i class="fa-solid fa-user-plus mr-2"></i>
+                            Ajouter l'employé
+                        </button>
+                        <button type="button" onclick="closeAddEmployeeModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center font-medium">
+                            <i class="fa-solid fa-times mr-2"></i>
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Team Modal -->
+    <div id="editTeamModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-edit text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Modifier l'Équipe</h3>
+                    </div>
+                    <button onclick="closeEditTeamModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <form id="editTeamForm" class="p-6">
+                <input type="hidden" id="editTeamId">
+                <div class="space-y-4">
+                    <!-- Team Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Nom de l'équipe</label>
+                        <input type="text" id="editTeamName" required 
+                               class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none"
+                               placeholder="ex: Équipe de Nuit A">
+                    </div>
+                    
+                    <!-- Team Description -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                        <textarea id="editTeamDescription" rows="3"
+                                  class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none"
+                                  placeholder="Description de l'équipe..."></textarea>
+                    </div>
+                    
+                    <!-- Team Color -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Couleur de l'équipe</label>
+                        <div class="flex space-x-2">
+                            <input type="color" id="editTeamColor" value="#3b82f6" 
+                                   class="w-12 h-10 rounded border border-gray-600 bg-gray-700">
+                            <input type="text" id="editTeamColorText" value="#3b82f6" 
+                                   class="flex-1 bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3 pt-6 border-t border-gray-600 mt-6">
+                    <button type="button" onclick="closeEditTeamModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors">
+                        Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Team Detail Modal -->
+    <div id="teamDetailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div id="teamDetailHeader" class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-group text-2xl text-white"></i>
+                        <h3 id="teamDetailTitle" class="text-xl font-bold text-white">Équipe</h3>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="refreshTeamBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                            <i class="fa-solid fa-sync-alt mr-1"></i>Actualiser
+                        </button>
+                        <button onclick="closeTeamDetailModal()" class="text-white hover:text-gray-200 transition-colors">
+                            <i class="fa-solid fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Team Members Section -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-semibold text-white flex items-center">
+                                <i class="fa-solid fa-users mr-2 text-blue-400"></i>
+                                Membres de l'équipe
+                            </h4>
+                            <button id="addMemberBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                <i class="fa-solid fa-plus mr-1"></i>Ajouter
+                            </button>
+                        </div>
+                        
+                        <!-- Members List -->
+                        <div id="teamMembersList" class="space-y-2 max-h-64 overflow-y-auto">
+                            <!-- Members will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Team Shifts Section -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-semibold text-white flex items-center">
+                                <i class="fa-solid fa-clock mr-2 text-green-400"></i>
+                                Horaires d'équipe
+                            </h4>
+                            <button id="addTeamShiftBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                <i class="fa-solid fa-plus mr-1"></i>Ajouter
+                            </button>
+                        </div>
+                        
+                        <!-- Shifts List -->
+                        <div id="teamShiftsList" class="space-y-2 max-h-64 overflow-y-auto">
+                            <!-- Shifts will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Team Shift Modal -->
+    <div id="addTeamShiftModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-clock text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Ajouter Horaire d'Équipe</h3>
+                    </div>
+                    <button onclick="closeAddTeamShiftModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <form id="addTeamShiftForm" class="p-6">
+                <div class="space-y-4">
+                    <!-- Shift Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Nom du poste</label>
+                        <input type="text" id="shiftName" required 
+                               class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none"
+                               placeholder="ex: Service de Nuit">
+                    </div>
+                    
+                    <!-- Start and End Time -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Heure de début</label>
+                            <input type="time" id="shiftStartTime" required 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Heure de fin</label>
+                            <input type="time" id="shiftEndTime" required 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                        </div>
+                    </div>
+                    
+                    <!-- Frequency -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Fréquence de travail</label>
+                        <select id="shiftFrequency" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                            <option value="1">Tous les jours</option>
+                            <option value="2">Tous les 2 jours</option>
+                            <option value="3">Tous les 3 jours</option>
+                            <option value="4">Tous les 4 jours</option>
+                            <option value="5">Tous les 5 jours</option>
+                            <option value="7">Toutes les semaines</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Start Date -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Date de début</label>
+                        <input type="date" id="shiftStartDate" required 
+                               class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    
+                    <!-- End Date (Optional) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Date de fin (optionnel)</label>
+                        <input type="date" id="shiftEndDate" 
+                               class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3 pt-6 border-t border-gray-600 mt-6">
+                    <button type="button" onclick="closeAddTeamShiftModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                        Créer l'horaire
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+                <div class="flex items-center space-x-3">
+                    <i id="confirmIcon" class="fa-solid fa-question-circle text-2xl text-white"></i>
+                    <h3 id="confirmTitle" class="text-xl font-bold text-white">Confirmation</h3>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="px-6 py-4">
+                <p id="confirmMessage" class="text-gray-300 mb-6">Êtes-vous sûr de vouloir effectuer cette action?</p>
+                
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3">
+                    <button id="confirmCancel" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                        Annuler
+                    </button>
+                    <button id="confirmOk" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        Confirmer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Management Modals -->
+    
+    <!-- Create Team Modal -->
+    <div id="createTeamModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-group text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Créer une Équipe</h3>
+                    </div>
+                    <button onclick="closeCreateTeamModal()" class="text-white hover:text-gray-300">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <form onsubmit="createTeam(event)" class="px-6 py-4">
+                <div class="space-y-4">
+                    <div>
+                        <label for="teamName" class="block text-sm font-medium text-gray-300 mb-2">
+                            Nom de l'équipe <span class="text-red-400">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="teamName" 
+                            name="teamName"
+                            required
+                            placeholder="Ex: Équipe Alpha"
+                            class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-green-400 focus:outline-none"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label for="teamDescription" class="block text-sm font-medium text-gray-300 mb-2">
+                            Description
+                        </label>
+                        <textarea 
+                            id="teamDescription" 
+                            name="teamDescription"
+                            rows="3"
+                            placeholder="Description de l'équipe..."
+                            class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-green-400 focus:outline-none resize-none"
+                        ></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="teamColor" class="block text-sm font-medium text-gray-300 mb-2">
+                            Couleur de l'équipe
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input 
+                                type="color" 
+                                id="teamColor" 
+                                name="teamColor"
+                                value="#3b82f6"
+                                class="w-12 h-10 rounded border border-gray-600 cursor-pointer"
+                                onchange="document.getElementById('teamColorText').value = this.value"
+                            >
+                            <input 
+                                type="text" 
+                                id="teamColorText"
+                                value="#3b82f6"
+                                placeholder="#3b82f6"
+                                class="flex-1 bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-green-400 focus:outline-none"
+                                onchange="document.getElementById('teamColor').value = this.value"
+                            >
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeCreateTeamModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                        <i class="fa-solid fa-plus mr-2"></i>Créer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Team Modal -->
+    <div id="editTeamModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-edit text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Modifier l'Équipe</h3>
+                    </div>
+                    <button onclick="closeEditTeamModal()" class="text-white hover:text-gray-300">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <form onsubmit="saveTeamChanges(event)" class="px-6 py-4">
+                <input type="hidden" id="editTeamId" name="editTeamId">
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="editTeamName" class="block text-sm font-medium text-gray-300 mb-2">
+                            Nom de l'équipe <span class="text-red-400">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="editTeamName" 
+                            name="editTeamName"
+                            required
+                            placeholder="Ex: Équipe Alpha"
+                            class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-orange-400 focus:outline-none"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label for="editTeamDescription" class="block text-sm font-medium text-gray-300 mb-2">
+                            Description
+                        </label>
+                        <textarea 
+                            id="editTeamDescription" 
+                            name="editTeamDescription"
+                            rows="3"
+                            placeholder="Description de l'équipe..."
+                            class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-orange-400 focus:outline-none resize-none"
+                        ></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="editTeamColor" class="block text-sm font-medium text-gray-300 mb-2">
+                            Couleur de l'équipe
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input 
+                                type="color" 
+                                id="editTeamColor" 
+                                name="editTeamColor"
+                                value="#3b82f6"
+                                class="w-12 h-10 rounded border border-gray-600 cursor-pointer"
+                                onchange="document.getElementById('editTeamColorText').value = this.value"
+                            >
+                            <input 
+                                type="text" 
+                                id="editTeamColorText"
+                                value="#3b82f6"
+                                placeholder="#3b82f6"
+                                class="flex-1 bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-orange-400 focus:outline-none"
+                                onchange="document.getElementById('editTeamColor').value = this.value"
+                            >
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="closeEditTeamModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors">
+                        <i class="fa-solid fa-save mr-2"></i>Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Team Detail Modal -->
+    <div id="teamDetailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div id="teamDetailHeader" class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-group text-2xl text-white"></i>
+                        <h3 id="teamDetailTitle" class="text-xl font-bold text-white">Équipe</h3>
+                    </div>
+                    <button onclick="closeTeamDetailModal()" class="text-white hover:text-gray-300">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Team Members Section -->
+                    <div class="bg-gray-700 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-white font-semibold flex items-center">
+                                <i class="fa-solid fa-users text-blue-400 mr-2"></i>
+                                Membres de l'équipe
+                            </h4>
+                            <button onclick="addMemberToTeam()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                                <i class="fa-solid fa-plus mr-1"></i>Ajouter
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <!-- Team members will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Team Schedule Section -->
+                    <div class="bg-gray-700 rounded-lg p-6">
+                        <h4 class="text-white font-semibold mb-4 flex items-center">
+                            <i class="fa-solid fa-calendar-days text-green-400 mr-2"></i>
+                            Horaires de l'équipe
+                        </h4>
+                        <!-- Team schedule will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Date Range Selection Modal -->
+    <div id="scheduleRangeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-calendar-range text-2xl text-white"></i>
+                        <h3 class="text-xl font-bold text-white">Générer Horaires d'Équipe</h3>
+                    </div>
+                    <button onclick="closeScheduleRangeModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6">
+                <div class="space-y-6">
+                    <!-- Date Range Section -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <i class="fa-solid fa-calendar text-green-400 mr-2"></i>
+                            Période d'application
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="scheduleStartDate" class="block text-sm font-medium text-gray-300 mb-2">
+                                    Date de début
+                                </label>
+                                <input 
+                                    type="date" 
+                                    id="scheduleStartDate" 
+                                    class="w-full bg-gray-600 border border-gray-500 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
+                                >
+                            </div>
+                            
+                            <div>
+                                <label for="scheduleEndDate" class="block text-sm font-medium text-gray-300 mb-2">
+                                    Date de fin
+                                </label>
+                                <input 
+                                    type="date" 
+                                    id="scheduleEndDate" 
+                                    class="w-full bg-gray-600 border border-gray-500 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weekend Rotation Section -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <i class="fa-solid fa-calendar-week text-blue-400 mr-2"></i>
+                            Rotation des fins de semaine
+                        </h4>
+                        <p class="text-gray-300 text-sm mb-4">
+                            Sélectionnez quel membre travaille chaque fin de semaine (24h/jour - samedi et dimanche).
+                        </p>
+                        
+                        <div id="weekendRotationContainer" class="space-y-3">
+                            <!-- Weekend rotation assignments will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Schedule Pattern Info -->
+                    <div class="bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg p-4">
+                        <h4 class="text-blue-300 font-semibold mb-2 flex items-center">
+                            <i class="fa-solid fa-info-circle mr-2"></i>
+                            Modèle d'horaire
+                        </h4>
+                        <ul class="text-blue-200 text-sm space-y-1">
+                            <li>• <strong>Jours de semaine :</strong> Chaque membre travaille 3 jours consécutifs (24h/jour)</li>
+                            <li>• <strong>Fins de semaine :</strong> Un membre par rotation travaille samedi et dimanche (24h/jour)</li>
+                            <li>• <strong>Répartition :</strong> Basée sur le nombre de membres de l'équipe</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button 
+                        type="button" 
+                        onclick="closeScheduleRangeModal()" 
+                        class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                    >
+                        Annuler
+                    </button>
+                    <button 
+                        type="button" 
+                        onclick="confirmScheduleGeneration()" 
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                        Générer Horaires
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!-- Create Team Modal -->
+<div id="createTeamModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl">
+        <!-- Modal Header -->
+        <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 rounded-t-xl">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-user-group text-2xl text-white"></i>
+                    <h3 class="text-xl font-bold text-white">Créer une Nouvelle Équipe</h3>
+                </div>
+                <button onclick="closeCreateTeamModal()" class="text-white hover:text-gray-200 transition-colors">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Modal Content -->
+        <form id="createTeamForm" class="p-6">
+            <div class="space-y-4">
+                <!-- Team Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Nom de l'équipe</label>
+                    <input type="text" id="teamName" required 
+                           class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none"
+                           placeholder="ex: Équipe de Nuit A">
+                </div>
+                
+                <!-- Team Description -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                    <textarea id="teamDescription" rows="3"
+                              class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none"
+                              placeholder="Description de l'équipe..."></textarea>
+                </div>
+                
+                <!-- Team Color -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Couleur de l'équipe</label>
+                    <div class="flex space-x-2">
+                        <input type="color" id="teamColor" value="#3b82f6" 
+                               class="w-12 h-10 rounded border border-gray-600 bg-gray-700">
+                        <input type="text" id="teamColorText" value="#3b82f6" 
+                               class="flex-1 bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-600 mt-6">
+                <button type="button" onclick="closeCreateTeamModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                    Annuler
+                </button>
+                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                    Créer l'équipe
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
