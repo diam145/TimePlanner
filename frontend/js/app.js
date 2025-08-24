@@ -1180,14 +1180,8 @@ function openEmployeeCalendar(employeeId) {
                     console.error('Error loading calendar:', error);
                     showNotification(`Erreur lors du chargement du calendrier: ${error.message}`, 'error');
                     
-                    // Generate calendar with sample data to show the structure
-                    const sampleData = {
-                        '2025-07-15': { schedule_type: 'work', activity_type: 'X', start_time: '08:00', end_time: '17:00' },
-                        '2025-07-16': { schedule_type: 'work', activity_type: 'S', start_time: '09:00', end_time: '16:00' },
-                        '2025-07-18': { schedule_type: 'work', activity_type: 'RP', start_time: '10:00', end_time: '18:00' },
-                        '2025-07-20': { schedule_type: 'work', activity_type: 'X', start_time: '20:00', end_time: '08:00', is_night_shift: true }
-                    };
-                    generateEmployeeCalendar(sampleData);
+                    // Show empty calendar instead of sample data for new users
+                    generateEmployeeCalendar({});
                 });
         }, 100); // Small delay to ensure modal is rendered
 }
@@ -2190,7 +2184,18 @@ function displayTeams() {
     
     teamsEmpty.classList.add('hidden');
     
-    teamsGrid.innerHTML = teams.map(team => `
+    teamsGrid.innerHTML = teams.map(team => {
+        // Get current employee data for team members to ensure names are up-to-date
+        const membersWithCurrentData = team.members.map(member => {
+            const currentEmployee = employees.find(emp => emp.id === member.id);
+            return currentEmployee ? {
+                ...member,
+                name: currentEmployee.name,
+                employee_number: currentEmployee.employee_number
+            } : member;
+        });
+        
+        return `
         <div class="bg-gray-800 rounded-lg border border-gray-600 p-6 hover:bg-gray-750 transition-colors">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center space-x-3">
@@ -2212,18 +2217,18 @@ function displayTeams() {
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-300">Membres</span>
-                    <span class="text-xs text-gray-500">${team.members.length} membre(s)</span>
+                    <span class="text-xs text-gray-500">${membersWithCurrentData.length} membre(s)</span>
                 </div>
                 <div class="space-y-1">
-                    ${team.members.slice(0, 3).map(member => `
+                    ${membersWithCurrentData.slice(0, 3).map(member => `
                         <div class="text-sm text-gray-300 flex items-center">
                             <i class="fa-solid fa-user text-xs mr-2 text-gray-500"></i>
                             ${member.name}
                         </div>
                     `).join('')}
-                    ${team.members.length > 3 ? `
+                    ${membersWithCurrentData.length > 3 ? `
                         <div class="text-xs text-gray-500">
-                            +${team.members.length - 3} autre(s)
+                            +${membersWithCurrentData.length - 3} autre(s)
                         </div>
                     ` : ''}
                 </div>
@@ -2238,7 +2243,8 @@ function displayTeams() {
                 </button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Open create team modal
@@ -2547,8 +2553,23 @@ function displayTeamMembers(team) {
         return;
     }
     
-    const membersHtml = team.members.length > 0 ? 
-        team.members.map((member, index) => `
+    // Get current employee data from the database to ensure names are up-to-date
+    const membersWithCurrentData = team.members.map(member => {
+        // Find the current employee data by ID to get the latest name
+        const currentEmployee = employees.find(emp => emp.id === member.id);
+        if (currentEmployee) {
+            return {
+                ...member,
+                name: currentEmployee.name, // Use current name from database
+                employee_number: currentEmployee.employee_number // Use current employee number
+            };
+        }
+        // Fallback to stored data if employee not found (shouldn't happen)
+        return member;
+    });
+    
+    const membersHtml = membersWithCurrentData.length > 0 ? 
+        membersWithCurrentData.map((member, index) => `
             <div class="flex items-center justify-between p-3 bg-gray-600 rounded-lg">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
@@ -3417,7 +3438,7 @@ function displayTeamSchedules() {
     
     // Always load schedules data for the specific date range
     console.log('Loading team schedules for date range...');
-    // Use the new team schedule API to get data for the entire date range
+    // Use the team schedule API to get data for the entire date range (now includes vacation entries)
     const startDateStr = getLocalDateString(startDate);
     const endDateStr = getLocalDateString(endDate);
     const url = `http://127.0.0.1:5001/api/schedule/team-range?start_date=${startDateStr}&end_date=${endDateStr}`;
@@ -3519,8 +3540,18 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
     const weekdays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
     
+    // Get current employee data for team members to ensure names are up-to-date
+    const teamMembersWithCurrentData = team.members.map(member => {
+        const currentEmployee = employees.find(emp => emp.id === member.id);
+        return currentEmployee ? {
+            ...member,
+            name: currentEmployee.name,
+            employee_number: currentEmployee.employee_number
+        } : member;
+    });
+    
     // Get actual schedule data for each team member
-    const memberSchedules = team.members.map(member => {
+    const memberSchedules = teamMembersWithCurrentData.map(member => {
         const memberSchedule = {};
         
         // Fetch actual schedule data for this member from the global schedules array
@@ -3548,7 +3579,7 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                     <div class="flex items-center space-x-3">
                         <div class="w-4 h-4 rounded-full ${team.color ? `bg-${team.color}-300` : 'bg-blue-300'}"></div>
                         <h3 class="text-xl font-bold text-white">${team.name}</h3>
-                        <span class="text-sm text-gray-200">(${team.members.length} membres)</span>
+                        <span class="text-sm text-gray-200">(${teamMembersWithCurrentData.length} membres)</span>
                     </div>
                 </div>
             </div>
@@ -3607,10 +3638,16 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                                     }
                                 }
                                 if (scheduleData) {
-                                    // Exclude M (Maladie) and V (Vacances) from totals
                                     const activityType = scheduleData.activity_type;
+                                    
+                                    // For day counting: exclude only M (Maladie) and V (Vacances)
+                                    // Include F (end of night shift) for day counting but not hours
                                     if (activityType && !['M', 'V'].includes(activityType.toUpperCase())) {
                                         totalDays++;
+                                    }
+                                    
+                                    // For hour counting: exclude M, V, and F entries
+                                    if (activityType && !['M', 'V', 'F'].includes(activityType.toUpperCase())) {
                                         // Add hours, handling different activity types with safer fallback
                                         let hours = 8; // Default hours
                                         if (scheduleData.hours_worked && !isNaN(scheduleData.hours_worked)) {
@@ -3735,7 +3772,7 @@ async function findMemberScheduleForDate(member, dateStr) {
 
 // Find member schedule using team schedule data (completely independent from main schedules)
 function findMemberScheduleFromArray(member, dateStr) {
-    // Only use the team schedule data - completely independent from main schedules
+    // Use the team schedule data from the fixed API that now includes vacation entries
     if (teamScheduleData && teamScheduleData.length > 0) {
         const memberSchedule = teamScheduleData.find(schedule => {
             const scheduleEmployeeName = schedule.employee_name || '';
@@ -3750,8 +3787,8 @@ function findMemberScheduleFromArray(member, dateStr) {
         }
     }
     
-    // Return null if no team schedule data found - don't fall back to main schedules
-    console.log(`No team schedule data found for member: ${member.name} on ${dateStr}`);
+    // Return null if no schedule data found
+    console.log(`No schedule data found for member: ${member.name} on ${dateStr}`);
     return null;
 }
 
@@ -4198,101 +4235,8 @@ function checkMemberDayConflicts(member, dateStr) {
     return conflicts;
 }
 
-// Load schedule data for a specific team and week
-function loadTeamScheduleData(team, weekStart) {
-    // Convert week start to actual dates
-    const startDate = new Date(weekStart);
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    
-    const formattedStartDate = startDate.toISOString().split('T')[0];
-    const formattedEndDate = endDate.toISOString().split('T')[0];
-    
-    // Generate mock schedule data instead of fetching from API
-    // This simulates the new 3-consecutive-days scheduling pattern
-    const memberSchedules = team.members.map((member, memberIndex) => {
-        const memberCount = team.members.length;
-        const schedules = [];
-        
-        // Generate weekday patterns (3 consecutive days for each member - WEEKDAYS ONLY Mon-Fri)
-        let weekdayPattern = [0, 0, 0, 0, 0, 0, 0]; // Initialize all days as 0
-        
-        if (memberCount === 1) {
-            // Single member works Mon-Wed-Fri (3 non-consecutive days for coverage)
-            weekdayPattern = [0, 1, 0, 1, 0, 1, 0]; // Sun, Mon, Tue, Wed, Thu, Fri, Sat
-        } else if (memberCount === 2) {
-            if (memberIndex === 0) {
-                weekdayPattern = [0, 1, 1, 1, 0, 0, 0]; // Mon-Tue-Wed
-            } else {
-                weekdayPattern = [0, 0, 1, 1, 1, 0, 0]; // Tue-Wed-Thu
-            }
-        } else if (memberCount === 3) {
-            if (memberIndex === 0) {
-                weekdayPattern = [0, 1, 1, 1, 0, 0, 0]; // Mon-Tue-Wed
-            } else if (memberIndex === 1) {
-                weekdayPattern = [0, 0, 1, 1, 1, 0, 0]; // Tue-Wed-Thu
-            } else {
-                weekdayPattern = [0, 0, 0, 1, 1, 1, 0]; // Wed-Thu-Fri
-            }
-        } else {
-            // For more than 3 members, cycle through 3-day patterns within weekdays only
-            const patterns = [
-                [0, 1, 1, 1, 0, 0, 0], // Mon-Tue-Wed
-                [0, 0, 1, 1, 1, 0, 0], // Tue-Wed-Thu
-                [0, 0, 0, 1, 1, 1, 0], // Wed-Thu-Fri
-                [0, 1, 0, 1, 0, 1, 0], // Mon-Wed-Fri
-                [0, 1, 1, 0, 1, 0, 0], // Mon-Tue-Thu
-            ];
-            weekdayPattern = patterns[memberIndex % patterns.length];
-        }
-        
-        // Generate schedule for each day of the week
-        for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-            const currentDate = new Date(startDate);
-            currentDate.setDate(startDate.getDate() + dayOffset);
-            const dateStr = currentDate.toISOString().split('T')[0];
-            const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
-            
-            // Check if this member works this day according to their pattern
-            if (weekdayPattern[dayOfWeek]) {
-                schedules.push({
-                    date: dateStr,
-                    activity_type: 'X',
-                    start_time: '00:00',
-                    end_time: '23:59',
-                    hours_worked: 24,
-                    is_night_shift: (dayOfWeek === 0 || dayOfWeek === 6) // Weekend shifts are night shifts
-                });
-            }
-            
-            // Separate weekend rotation logic (override pattern for weekends if different member assigned)
-            if ((dayOfWeek === 0 || dayOfWeek === 6) && !weekdayPattern[dayOfWeek]) { // Weekend and not already in pattern
-                const weekendRotationIndex = team.weekendRotationIndex || 0;
-                const assignedMember = weekendRotationIndex % memberCount;
-                if (assignedMember === memberIndex) {
-                    schedules.push({
-                        date: dateStr,
-                        activity_type: 'X',
-                        start_time: '00:00',
-                        end_time: '23:59',
-                        hours_worked: 24,
-                        is_night_shift: true
-                    });
-                }
-            }
-        }
-        
-        return schedules;
-    });
-    
-    // Return promise that resolves with member schedule data
-    return Promise.resolve(
-        team.members.map((member, index) => ({
-            member,
-            schedules: memberSchedules[index] || []
-        }))
-    );
-}
+// Legacy function - no longer used, replaced with real database calls
+// Load schedule data for a specific team and week (DEPRECATED)
 
 // Generate team schedule card HTML
 function generateTeamScheduleCard(team, scheduleData, weekStart) {

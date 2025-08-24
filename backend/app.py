@@ -429,33 +429,8 @@ def get_weekly_schedule():
         import traceback
         traceback.print_exc()
         
-        # Return a fallback response with sample data for testing
-        sample_data = [
-            {
-                "Name": "Alice",
-                "Sunday": "",
-                "Monday": "F",
-                "Tuesday": "X", 
-                "Wednesday": "",
-                "Thursday": "S",
-                "Friday": "",
-                "Saturday": "",
-                "TOTAL": 2
-            },
-            {
-                "Name": "Charlie",
-                "Sunday": "",
-                "Monday": "",
-                "Tuesday": "",
-                "Wednesday": "F",
-                "Thursday": "RP",
-                "Friday": "X",
-                "Saturday": "",
-                "TOTAL": 3
-            }
-        ]
-        print("Returning sample data due to error")
-        return jsonify(sample_data)
+        # Return empty data instead of sample data for new users
+        return jsonify([])
 
 # ✨ NEW ENDPOINT for generating weekly reports
 @app.route('/api/reports/weekly', methods=['POST'])
@@ -671,14 +646,11 @@ def export_excel():
             row_data['TOTAL'] = total_hours
             schedule_data.append(row_data)
         
-        # If no real data, use sample data as fallback
+        # If no real data, return empty dataframe
         if not schedule_data:
-            print("No schedule data found, using sample data")
-            schedule_data = [
-                {"Name": "Alice Djon", "Dimanche": "", "Lundi": "F", "Mardi": "X", "Mercredi": "", "Jeudi": "S", "Vendredi": "", "Samedi": "", "TOTAL": 2},
-                {"Name": "Bob Martin", "Dimanche": "", "Lundi": "X", "Mardi": "S", "Mercredi": "F", "Jeudi": "", "Vendredi": "X", "Samedi": "", "TOTAL": 3},
-                {"Name": "Charlie Brown", "Dimanche": "", "Lundi": "", "Mardi": "", "Mercredi": "F", "Jeudi": "RP", "Vendredi": "X", "Samedi": "", "TOTAL": 2}
-            ]
+            print("No schedule data found, returning empty dataframe")
+            # Create empty dataframe with proper columns
+            schedule_data = []
         
         df = pd.DataFrame(schedule_data)
         print(f"Created DataFrame with {len(df)} employees")
@@ -918,16 +890,22 @@ def export_team_schedules():
         
         # Build schedule data for each worker
         worker_schedule_data = {}
+        
+        # First, initialize all workers with empty schedule data
         for worker in workers:
             worker_id = worker['id']
             worker_name = worker['name']
-            worker_schedules = [s for s in schedules if s['employee_id'] == worker_id]
-            
-            worker_data = {
+            worker_schedule_data[worker_name] = {
                 'employee_name': worker_name,
                 'employee_id': worker_id,
                 'schedules': {}
             }
+        
+        # Then, populate schedules for workers who have them
+        for worker in workers:
+            worker_id = worker['id']
+            worker_name = worker['name']
+            worker_schedules = [s for s in schedules if s['employee_id'] == worker_id]
             
             for schedule in worker_schedules:
                 schedule_date = schedule['date']
@@ -968,14 +946,13 @@ def export_team_schedules():
                 else:
                     continue
                 
-                worker_data['schedules'][schedule_date] = {
+                worker_schedule_data[worker_name]['schedules'][schedule_date] = {
                     'activity_type': display_value,
                     'start_time': schedule['start_time'],
                     'end_time': schedule['end_time'],
                     'hours_worked': schedule['hours_worked'],
                     'is_night_shift': schedule['is_night_shift']
                 }
-            worker_schedule_data[worker_name] = worker_data
         
         # Generate date range
         date_range = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
@@ -986,21 +963,52 @@ def export_team_schedules():
         # Create data rows
         data_rows = []
         for team_index, team in enumerate(teams_data):
-            team_members = [m['name'] for m in team['members'] if isinstance(m, dict) and m.get('name') in worker_schedule_data]
+            # Get team member IDs and fetch current names from database
+            team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
             
-            if team_members:
-                for i, member_name in enumerate(team_members):
+            # Fetch current member names from database (in case names were updated)
+            team_members_with_current_names = []
+            for member_id in team_member_ids:
+                # Find the worker in the database by ID to get current name
+                current_worker = next((w for w in workers if w['id'] == member_id), None)
+                if current_worker and current_worker['name'] in worker_schedule_data:
+                    team_members_with_current_names.append(current_worker['name'])
+            
+            if team_members_with_current_names:
+                for i, member_name in enumerate(team_members_with_current_names):
                     member_data = worker_schedule_data[member_name]
                     row_data = {'Sage-femme': member_name}
                     
                     for date in date_range:
                         date_str = date.strftime('%Y-%m-%d')
                         schedule_info = member_data['schedules'].get(date_str)
+                        
                         if schedule_info:
                             activity = schedule_info['activity_type']
                             row_data[date_str] = '-' if activity == 'V' or activity == 'M' else activity
                         else:
-                            row_data[date_str] = ''
+                            # Apply F\n9h injection logic - same as frontend team schedules
+                            # Check if previous day was a night shift
+                            prev_date = date - timedelta(days=1)
+                            prev_date_str = prev_date.strftime('%Y-%m-%d')
+                            prev_schedule = member_data['schedules'].get(prev_date_str)
+                            
+                            if prev_schedule and prev_schedule.get('is_night_shift'):
+                                # Inject F\n9h using the end time from previous day, default to 9h
+                                end_time = prev_schedule.get('end_time', '09:00')
+                                if end_time:
+                                    try:
+                                        hour = int(end_time.split(':')[0])
+                                        if hour < 12:  # Morning end time, use F\nXh format
+                                            row_data[date_str] = f"F\n{hour}h"
+                                        else:
+                                            row_data[date_str] = ''
+                                    except (ValueError, IndexError):
+                                        row_data[date_str] = "F\n9h"  # Default fallback
+                                else:
+                                    row_data[date_str] = "F\n9h"  # Default fallback
+                            else:
+                                row_data[date_str] = ''
                     data_rows.append(row_data)
 
         df = pd.DataFrame(data_rows, columns=column_headers)
@@ -1148,7 +1156,7 @@ def export_team_schedules():
                 # Set column widths
                 worksheet.column_dimensions['A'].width = 3
                 worksheet.column_dimensions['B'].width = 15
-                for col_idx in range(3, len(date_range) + 3):  # just enough columns for the dates
+                for col_idx in range(3, len(date_range) + 10):  # just enough columns for the dates
                     worksheet.column_dimensions[get_column_letter(col_idx)].width = 3.7
                 
                 # --- FORMATTING STYLES ---
@@ -1216,10 +1224,20 @@ def export_team_schedules():
                 
                 # --- MAIN TABLE FORMATTING ---
                 max_col = len(df.columns) + 1
-                current_row = 11
+                current_row = 10  # Start at row 10 to match where data is written (startrow=9 means row 10 in Excel)
                 for team_index, team in enumerate(teams_data):
-                    team_members = [m['name'] for m in team['members'] if isinstance(m, dict) and m.get('name') in worker_schedule_data]
-                    num_members = len(team_members)
+                    # Get team member IDs and fetch current names from database
+                    team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
+                    
+                    # Fetch current member names from database (in case names were updated)
+                    team_members_with_current_names = []
+                    for member_id in team_member_ids:
+                        # Find the worker in the database by ID to get current name
+                        current_worker = next((w for w in workers if w['id'] == member_id), None)
+                        if current_worker and current_worker['name'] in worker_schedule_data:
+                            team_members_with_current_names.append(current_worker['name'])
+                    
+                    num_members = len(team_members_with_current_names)
 
                     if num_members == 0:
                         continue
@@ -1270,7 +1288,7 @@ def export_team_schedules():
                     current_row += num_members
 
                 # --- FOOTER AND LEGEND ---
-                bottom_day_num_row = len(df) + 10
+                bottom_day_num_row = current_row  # Use current_row which is now 1 row below the last data row
                 for col_idx, date in enumerate(date_range):
                     col_letter = get_column_letter(col_idx + 3)
                     day_num_cell_bottom = worksheet[f"{col_letter}{bottom_day_num_row}"]
@@ -1296,17 +1314,37 @@ def export_team_schedules():
                 
                 has_members = False
                 all_contact_cols = []
+                total_members_count = 0
+                current_member_index = 0
+
+                # First, count total members across all teams using database lookup
+                for team in teams_data:
+                    # Get team member IDs and fetch current names from database
+                    team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
+                    for member_id in team_member_ids:
+                        current_worker = next((w for w in workers if w['id'] == member_id), None)
+                        if current_worker and current_worker['name'] in worker_schedule_data:
+                            total_members_count += 1
 
                 for team_index, team in enumerate(teams_data):
-                    team_members = [m['name'] for m in team['members'] if isinstance(m, dict) and m.get('name') in worker_schedule_data]
+                    # Get team member IDs and fetch current names from database
+                    team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
                     
-                    if not team_members:
+                    # Fetch current member names from database (in case names were updated)
+                    team_members_with_current_names = []
+                    for member_id in team_member_ids:
+                        # Find the worker in the database by ID to get current name
+                        current_worker = next((w for w in workers if w['id'] == member_id), None)
+                        if current_worker and current_worker['name'] in worker_schedule_data:
+                            team_members_with_current_names.append(current_worker['name'])
+                    
+                    if not team_members_with_current_names:
                         continue
                     
                     has_members = True
                     is_team_to_color = (team_index % 2 == 0)
                     
-                    for member_index, member_name in enumerate(team_members):
+                    for member_index, member_name in enumerate(team_members_with_current_names):
                         contact_fill = team_fill if is_team_to_color else PatternFill(fill_type=None)
 
                         name_start_col_letter = get_column_letter(current_col)
@@ -1329,8 +1367,8 @@ def export_team_schedules():
                         phone_cell.alignment = contact_info_alignment
                         phone_cell.fill = contact_fill
 
-                        is_first_member_of_all = (team_index == 0 and member_index == 0)
-                        is_last_member_of_team = (member_index == len(team_members) - 1)
+                        is_first_member_of_all = (current_member_index == 0)
+                        is_last_member_of_all = (current_member_index == total_members_count - 1)
 
                         for r in range(footer_start_row, footer_start_row + 2):
                             for c_offset in range(cols_per_contact):
@@ -1343,12 +1381,13 @@ def export_team_schedules():
                                     left_b = thick_side if is_first_member_of_all else thin_side
                                 
                                 if c_offset == cols_per_contact - 1:
-                                    right_b = thick_side if is_last_member_of_team else thin_side
+                                    right_b = thick_side if is_last_member_of_all else thin_side
                                 
                                 cell.border = Border(left=left_b, right=right_b, top=top_b, bottom=bottom_b)
 
                         all_contact_cols.extend(range(current_col, current_col + cols_per_contact))
                         current_col += cols_per_contact
+                        current_member_index += 1
 
                 if has_members:
                     worksheet.row_dimensions[footer_start_row].height = 30
@@ -1580,23 +1619,8 @@ def add_weekly_schedule():
                               day_schedule.get('isNightShift', False),
                               shift_num, hours_worked))
                         
-                        # Handle night shift end marking
-                        if day_schedule.get('isNightShift', False):
-                            next_date = current_date + timedelta(days=1)
-                            next_day_of_week = (next_date.weekday() + 1) % 7
-                            
-                            # Create end of night shift entry with proper logic
-                            end_hour = int(day_schedule['endTime'].split(':')[0])
-                            if end_hour < 12:  # Before noon, use F format
-                                activity_type = f'F{day_schedule["endTime"]}'
-                            else:  # At or after noon, use X format
-                                activity_type = 'X'
-                            
-                            conn.execute('''
-                                INSERT OR REPLACE INTO employee_schedules 
-                                (employee_id, date, day_of_week, start_time, end_time, schedule_type, activity_type, is_night_shift, shift_number, hours_worked, updated_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                            ''', (employee_id, next_date.strftime('%Y-%m-%d'), next_day_of_week, None, day_schedule['endTime'], 'end_of_night_shift', activity_type, False, shift_num, 0))
+                        # Note: F\n9h entries are now generated dynamically during display/export
+                        # No need to store them in the database
             
             current_date = current_date + timedelta(days=1)
         
@@ -1653,22 +1677,8 @@ def update_day_schedule():
         ''', (employee_id, date, day_of_week, start_time, end_time, 'work', activity_type, is_night_shift, 1, hours_worked))
         
         # Handle night shift end marking if applicable
-        if is_night_shift:
-            next_date = date_obj + timedelta(days=1)
-            next_day_of_week = (next_date.weekday() + 1) % 7
-            
-            # Create end of night shift entry with proper logic
-            end_hour = int(end_time.split(':')[0])
-            if end_hour < 12:  # Before noon, use F format
-                night_activity_type = f'F{end_time}'
-            else:  # At or after noon, use X format
-                night_activity_type = 'X'
-            
-            conn.execute('''
-                INSERT OR REPLACE INTO employee_schedules 
-                (employee_id, date, day_of_week, start_time, end_time, schedule_type, activity_type, is_night_shift, shift_number, hours_worked, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ''', (employee_id, next_date.strftime('%Y-%m-%d'), next_day_of_week, None, end_time, 'end_of_night_shift', night_activity_type, False, 1, 0))
+        # Note: F\n9h entries are now generated dynamically during display/export
+        # No need to store them in the database
         
         conn.commit()
         return jsonify({"message": "Day schedule updated successfully"})
@@ -1948,24 +1958,8 @@ def save_day_schedule(worker_id):
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ''', (worker_id, date, day_of_week, start_time, end_time, schedule_type, activity_type, is_night_shift, shift_num, hours_worked))
             
-            # If this is a night shift, also create an entry for the next day with "F{time}" marking
-            if schedule_type == 'work' and is_night_shift and end_time:
-                next_date = date_obj + timedelta(days=1)
-                next_day_of_week = (next_date.weekday() + 1) % 7
-                
-                # Create end of night shift entry with proper logic
-                end_hour = int(end_time.split(':')[0])
-                if end_hour < 12:  # Before noon, use F format
-                    activity_type = f'F{end_time}'
-                else:  # At or after noon, use X format
-                    activity_type = 'X'
-                
-                # Create a special "end_of_night_shift" entry for the next day
-                conn.execute('''
-                    INSERT OR REPLACE INTO employee_schedules 
-                    (employee_id, date, day_of_week, start_time, end_time, schedule_type, activity_type, is_night_shift, shift_number, hours_worked, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                ''', (worker_id, next_date.strftime('%Y-%m-%d'), next_day_of_week, None, end_time, 'end_of_night_shift', activity_type, False, shift_num, 0))
+            # Note: F\n9h entries are now generated dynamically during display/export
+            # No need to store them in the database
         
         conn.commit()
         
@@ -2151,14 +2145,11 @@ def update_archive_file(filename):
             # Get the dataframe for the week
             df = processor.getDataframe(week_start)
             
-            # If df is None or empty, create sample data
+            # If df is None or empty, create empty dataframe
             if df is None or df.empty:
-                print("DataFrame is empty, creating sample data for Excel export")
-                sample_data = [
-                    {"Name": "Alice", "Sunday": "", "Monday": "F", "Tuesday": "X", "Wednesday": "", "Thursday": "S", "Friday": "", "Saturday": "", "TOTAL": 2},
-                    {"Name": "Charlie", "Sunday": "", "Monday": "", "Tuesday": "", "Wednesday": "F", "Thursday": "RP", "Friday": "X", "Saturday": "", "TOTAL": 3}
-                ]
-                df = pd.DataFrame(sample_data)
+                print("DataFrame is empty, creating empty dataframe for Excel export")
+                # Create empty dataframe with proper structure
+                df = pd.DataFrame(columns=["Name", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "TOTAL"])
             
             # Create the file path using standardized archive directory
             archive_dir = os.path.join('data', 'archive')
@@ -2758,6 +2749,18 @@ def get_team_schedule_range():
                             display_value = f"D\n{hour}h"
                         else:
                             display_value = activity.upper()
+                
+                elif schedule['schedule_type'] == 'unavailable':
+                    # Handle unavailable schedules (vacation, sick leave, etc.)
+                    activity = schedule['activity_type'] or 'V'
+                    if activity.upper() == 'V':
+                        display_value = 'V'  # Vacances
+                    elif activity.upper() == 'C':
+                        display_value = 'C'  # Congé
+                    elif activity.upper() == 'M':
+                        display_value = 'M'  # Maladie
+                    else:
+                        display_value = activity.upper()
                 
                 elif schedule['schedule_type'] == 'end_of_night_shift':
                     # Night shift ending - show F + time only if end time is before 12:00 PM (noon)

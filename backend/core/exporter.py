@@ -612,14 +612,45 @@ def apply_professional_styling(ws, months_to_display):
 def get_schedule_value_for_date(employee_data, date_key):
     """Get the schedule value for an employee on a specific date"""
     
-    # This should return 'X', 'S', 'F', 'RP', etc. based on the employee's schedule
-    # For now, return empty string as placeholder
+    # Check if there's schedule data for this date
     if 'schedules' in employee_data and date_key in employee_data['schedules']:
         schedule_info = employee_data['schedules'][date_key]
         if isinstance(schedule_info, dict):
-            return schedule_info.get('activity_type', '')
+            activity_type = schedule_info.get('activity_type', '')
+            # Format according to the display logic (add time for D and F)
+            if activity_type == 'D':
+                start_time = schedule_info.get('start_time', '17:00')
+                if start_time == '17:00':
+                    return 'D\n17h'
+                else:
+                    return 'D\n16h'
+            elif activity_type == 'F':
+                end_time = schedule_info.get('end_time', '09:00')
+                if end_time == '09:00':
+                    return 'F\n9h'
+                else:
+                    return 'F\n8h'
+            else:
+                return activity_type
         else:
             return str(schedule_info)
+    
+    # Apply F\n9h injection logic (same as frontend)
+    # Check if previous day was a night shift
+    try:
+        from datetime import datetime, timedelta
+        current_date = datetime.strptime(date_key, '%Y-%m-%d')
+        prev_date = current_date - timedelta(days=1)
+        prev_date_key = prev_date.strftime('%Y-%m-%d')
+        
+        if ('schedules' in employee_data and 
+            prev_date_key in employee_data['schedules']):
+            prev_schedule = employee_data['schedules'][prev_date_key]
+            if isinstance(prev_schedule, dict) and prev_schedule.get('is_night_shift', False):
+                # Inject F\n9h for end of night shift
+                return 'F\n9h'
+    except (ValueError, KeyError):
+        pass
     
     return ''
 
