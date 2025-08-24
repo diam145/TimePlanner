@@ -1,0 +1,40 @@
+# Ignore Python libraries
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.dist-info/
+
+# Ignore virtual environments
+venv/
+.env/
+# Ignore backend virtual environment
+backend/venv/
+
+# Ignore test files
+backend/test_*.py
+frontend/test_*.js
+
+# Ignore Excel files
+*.xlsx
+*.xls
+
+# Ignore temporary files
+*.tmp
+*.log
+*.bak
+
+# Ignore node_modules
+frontend/node_modules/
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore TimePlanner-Fixed directory
+TimePlanner-Fixed/
