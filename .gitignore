@@ -38,3 +38,13 @@ Thumbs.db
 
 # Ignore TimePlanner-Fixed directory
 TimePlanner-Fixed/
+
+# Ignore backend dist and build directories
+backend/dist/
+backend/build/
+
+# Ignore frontend js README file
+frontend/js/README.md
+
+# Ignore entire electron-app folder
+electron-app/

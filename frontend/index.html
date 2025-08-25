@@ -206,20 +206,12 @@
                     </div>
                 </div>
                 
-                <!-- Fixed Export Button at Bottom -->
-                <div class="bg-gray-800 border-t border-gray-700 p-6 fixed-export-bar">
-                    <div class="flex items-center space-x-4">
-                        <div class="flex flex-col">
-                            <label for="exportFormat" class="text-sm text-gray-400 mb-1">Format d'Export</label>
-                            <select id="exportFormat" class="bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded-lg">
-                                <option value="standard">Standard Excel</option>
-                                <option value="professional">Format Professionnel</option>
-                            </select>
-                        </div>
-                        <button id="exportExcel" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center text-lg font-medium">
-                            <i class="fa-solid fa-file-excel mr-3"></i>
-                            Exportez sur Excel
-                        </button>
+                <!-- Copyright Footer -->
+                <div class="bg-gray-800 border-t border-gray-700 p-4 fixed-export-bar">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-400">
+                            © <span id="currentYear"></span> Maison de naissance de la Rivière - Tous droits réservés
+                        </p>
                     </div>
                 </div>
             </div>
@@ -895,7 +887,7 @@
                     <button type="button" onclick="closeEditTeamModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
                         Annuler
                     </button>
-                    <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors">
+                    <button type="submit" onclick="saveTeamChanges(event)" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors">
                         Modifier
                     </button>
                 </div>

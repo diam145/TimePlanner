@@ -275,7 +275,7 @@ def get_workers():
     
     return jsonify(workers_list)
 
-# ✨ NEW ENDPOINT for weekly schedule
+# NEW ENDPOINT for weekly schedule
 @app.route('/api/schedule/weekly', methods=['GET'])
 def get_weekly_schedule():
     # Get the date from the query parameter, default to today if not provided
@@ -432,7 +432,7 @@ def get_weekly_schedule():
         # Return empty data instead of sample data for new users
         return jsonify([])
 
-# ✨ NEW ENDPOINT for generating weekly reports
+# NEW ENDPOINT for generating weekly reports
 @app.route('/api/reports/weekly', methods=['POST'])
 def generate_weekly_report():
     try:
@@ -448,7 +448,7 @@ def generate_weekly_report():
         print(f"Error generating weekly report: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ✨ NEW ENDPOINT for Excel export
+# NEW ENDPOINT for Excel export
 @app.route('/api/export/excel', methods=['GET'])
 def export_excel():
     try:
@@ -676,7 +676,7 @@ def export_excel():
         # Verify file was created
         if os.path.exists(file_path):
             file_size = os.path.getsize(file_path)
-            print(f"✅ Excel file saved to archive: {file_path}")
+            print(f"Excel file saved to archive: {file_path}")
             print(f"   File size: {file_size} bytes")
         else:
             raise Exception(f"File was not created: {file_path}")
@@ -703,7 +703,7 @@ def export_excel():
         
         return jsonify({"error": f"Export failed: {str(e)}"}), 500
 
-# ✨ NEW ENDPOINT for Professional Schedule Export (modelExcel.xlsx format)
+# NEW ENDPOINT for Professional Schedule Export (modelExcel.xlsx format)
 @app.route('/api/export/professional-schedule', methods=['POST'])
 def export_professional_schedule():
     """Export schedules in professional format matching modelExcel.xlsx"""
@@ -815,7 +815,7 @@ def export_professional_schedule():
             # Verify file was created
             if os.path.exists(file_path):
                 file_size = os.path.getsize(file_path)
-                print(f"✅ Professional schedule export saved: {file_path}")
+                print(f"Professional schedule export saved: {file_path}")
                 print(f"   File size: {file_size} bytes")
                 
                 return jsonify({
@@ -844,7 +844,7 @@ def export_professional_schedule():
         return jsonify({"error": f"Professional export failed: {str(e)}"}), 500
 
 
-# ✨ NEW ENDPOINT for Team Schedules Excel export
+# NEW ENDPOINT for Team Schedules Excel export
 @app.route('/api/export/team-schedules', methods=['POST'])
 def export_team_schedules():
     """Export team schedules to Excel format using the exact same data as the UI"""
@@ -963,35 +963,62 @@ def export_team_schedules():
         # Create data rows
         data_rows = []
         for team_index, team in enumerate(teams_data):
-            # Get team member IDs and fetch current names from database
-            team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
+            # Get team members - use the member data directly from the frontend
+            team_members = team.get('members', [])
             
-            # Fetch current member names from database (in case names were updated)
-            team_members_with_current_names = []
-            for member_id in team_member_ids:
-                # Find the worker in the database by ID to get current name
-                current_worker = next((w for w in workers if w['id'] == member_id), None)
-                if current_worker and current_worker['name'] in worker_schedule_data:
-                    team_members_with_current_names.append(current_worker['name'])
-            
-            if team_members_with_current_names:
-                for i, member_name in enumerate(team_members_with_current_names):
-                    member_data = worker_schedule_data[member_name]
+            if team_members:
+                for member in team_members:
+                    member_name = member.get('name', '')
+                    if not member_name:
+                        continue
+                    
+                    # Try to find schedule data for this member by name (same logic as frontend)
+                    member_schedule_data = None
+                    
+                    # Strategy 1: Match by exact name
+                    if member_name in worker_schedule_data:
+                        member_schedule_data = worker_schedule_data[member_name]
+                    else:
+                        # Strategy 2: Match by partial name (first name or last name)
+                        member_name_parts = member_name.lower().split(' ')
+                        for worker_name, worker_data in worker_schedule_data.items():
+                            worker_name_parts = worker_name.lower().split(' ')
+                            # Check if any part of the names match
+                            if any(part in worker_name_parts for part in member_name_parts if len(part) > 2):
+                                member_schedule_data = worker_data
+                                print(f"Matched {member_name} with {worker_name} by partial name")
+                                break
+                    
+                    if not member_schedule_data:
+                        print(f"No schedule data found for team member: {member_name}")
+                        # Create empty schedule data for this member
+                        member_schedule_data = {
+                            'employee_name': member_name,
+                            'schedules': {}
+                        }
+                    
+                    # Build row data for this member
                     row_data = {'Sage-femme': member_name}
                     
                     for date in date_range:
                         date_str = date.strftime('%Y-%m-%d')
-                        schedule_info = member_data['schedules'].get(date_str)
+                        schedule_info = member_schedule_data['schedules'].get(date_str)
                         
                         if schedule_info:
                             activity = schedule_info['activity_type']
-                            row_data[date_str] = '-' if activity == 'V' or activity == 'M' else activity
+                            # Handle special symbols for Excel export
+                            if activity == 'M':  # Maladie/Sick - empty cell
+                                row_data[date_str] = ''
+                            elif activity == 'V':  # Vacances/Vacation - dash
+                                row_data[date_str] = '-'
+                            else:
+                                row_data[date_str] = activity
                         else:
                             # Apply F\n9h injection logic - same as frontend team schedules
                             # Check if previous day was a night shift
                             prev_date = date - timedelta(days=1)
                             prev_date_str = prev_date.strftime('%Y-%m-%d')
-                            prev_schedule = member_data['schedules'].get(prev_date_str)
+                            prev_schedule = member_schedule_data['schedules'].get(prev_date_str)
                             
                             if prev_schedule and prev_schedule.get('is_night_shift'):
                                 # Inject F\n9h using the end time from previous day, default to 9h
@@ -1009,6 +1036,7 @@ def export_team_schedules():
                                     row_data[date_str] = "F\n9h"  # Default fallback
                             else:
                                 row_data[date_str] = ''
+                    
                     data_rows.append(row_data)
 
         df = pd.DataFrame(data_rows, columns=column_headers)
@@ -1226,18 +1254,30 @@ def export_team_schedules():
                 max_col = len(df.columns) + 1
                 current_row = 10  # Start at row 10 to match where data is written (startrow=9 means row 10 in Excel)
                 for team_index, team in enumerate(teams_data):
-                    # Get team member IDs and fetch current names from database
-                    team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
+                    # Get team members - use the member data directly from the frontend
+                    team_members = team.get('members', [])
+                    team_members_with_schedule_data = []
                     
-                    # Fetch current member names from database (in case names were updated)
-                    team_members_with_current_names = []
-                    for member_id in team_member_ids:
-                        # Find the worker in the database by ID to get current name
-                        current_worker = next((w for w in workers if w['id'] == member_id), None)
-                        if current_worker and current_worker['name'] in worker_schedule_data:
-                            team_members_with_current_names.append(current_worker['name'])
+                    for member in team_members:
+                        member_name = member.get('name', '')
+                        if not member_name:
+                            continue
+                        
+                        # Check if we have schedule data for this member
+                        has_schedule_data = member_name in worker_schedule_data
+                        if not has_schedule_data:
+                            # Try partial name matching
+                            member_name_parts = member_name.lower().split(' ')
+                            for worker_name in worker_schedule_data.keys():
+                                worker_name_parts = worker_name.lower().split(' ')
+                                if any(part in worker_name_parts for part in member_name_parts if len(part) > 2):
+                                    has_schedule_data = True
+                                    break
+                        
+                        if has_schedule_data or True:  # Include all members even if no schedule data
+                            team_members_with_schedule_data.append(member_name)
                     
-                    num_members = len(team_members_with_current_names)
+                    num_members = len(team_members_with_schedule_data)
 
                     if num_members == 0:
                         continue
@@ -1317,34 +1357,31 @@ def export_team_schedules():
                 total_members_count = 0
                 current_member_index = 0
 
-                # First, count total members across all teams using database lookup
+                # First, count total members across all teams using frontend data
                 for team in teams_data:
-                    # Get team member IDs and fetch current names from database
-                    team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
-                    for member_id in team_member_ids:
-                        current_worker = next((w for w in workers if w['id'] == member_id), None)
-                        if current_worker and current_worker['name'] in worker_schedule_data:
+                    team_members = team.get('members', [])
+                    for member in team_members:
+                        member_name = member.get('name', '')
+                        if member_name:
                             total_members_count += 1
 
                 for team_index, team in enumerate(teams_data):
-                    # Get team member IDs and fetch current names from database
-                    team_member_ids = [m.get('id') for m in team['members'] if isinstance(m, dict) and m.get('id')]
+                    # Get team members - use the member data directly from the frontend
+                    team_members = team.get('members', [])
+                    team_member_names = [member.get('name', '') for member in team_members if member.get('name', '')]
                     
-                    # Fetch current member names from database (in case names were updated)
-                    team_members_with_current_names = []
-                    for member_id in team_member_ids:
-                        # Find the worker in the database by ID to get current name
-                        current_worker = next((w for w in workers if w['id'] == member_id), None)
-                        if current_worker and current_worker['name'] in worker_schedule_data:
-                            team_members_with_current_names.append(current_worker['name'])
-                    
-                    if not team_members_with_current_names:
+                    if not team_member_names:
                         continue
                     
                     has_members = True
                     is_team_to_color = (team_index % 2 == 0)
+                    is_first_team = (team_index == 0)
+                    is_last_team = (team_index == len([t for t in teams_data if t.get('members')]) - 1)
                     
-                    for member_index, member_name in enumerate(team_members_with_current_names):
+                    for member_index, member_name in enumerate(team_member_names):
+                        is_first_member_of_team = (member_index == 0)
+                        is_last_member_of_team = (member_index == len(team_member_names) - 1)
+                        
                         contact_fill = team_fill if is_team_to_color else PatternFill(fill_type=None)
 
                         name_start_col_letter = get_column_letter(current_col)
@@ -1377,11 +1414,19 @@ def export_team_schedules():
                                 
                                 left_b, right_b, top_b, bottom_b = cell.border.left, cell.border.right, cell.border.top, cell.border.bottom
 
+                                # Left border: thick if first member of team or first overall
                                 if c_offset == 0:
-                                    left_b = thick_side if is_first_member_of_all else thin_side
+                                    if is_first_member_of_team or is_first_member_of_all:
+                                        left_b = thick_side
+                                    else:
+                                        left_b = thin_side
                                 
+                                # Right border: thick if last member of team or last overall
                                 if c_offset == cols_per_contact - 1:
-                                    right_b = thick_side if is_last_member_of_all else thin_side
+                                    if is_last_member_of_team or is_last_member_of_all:
+                                        right_b = thick_side
+                                    else:
+                                        right_b = thin_side
                                 
                                 cell.border = Border(left=left_b, right=right_b, top=top_b, bottom=bottom_b)
 
@@ -1425,7 +1470,7 @@ def export_team_schedules():
         return jsonify({"error": f"Export failed: {str(e)}"}), 500
 
 
-# ✨ NEW ENDPOINTS for employee management
+# NEW ENDPOINTS for employee management
 @app.route('/api/workers', methods=['POST'])
 def add_worker():
     try:
@@ -1530,7 +1575,7 @@ def delete_worker(worker_id):
         print(f"Error deleting worker: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ✨ NEW ENDPOINTS for employee schedule management
+# NEW ENDPOINTS for employee schedule management
 
 @app.route('/api/schedules/weekly', methods=['POST'])
 def add_weekly_schedule():
@@ -2069,7 +2114,7 @@ def get_worker_weekly_summary(worker_id):
 
 from datetime import timedelta
 
-# ✨ NEW ENDPOINTS for reports management
+# NEW ENDPOINTS for reports management
 
 @app.route('/api/reports/archive', methods=['GET'])
 def get_archive_files():
@@ -2123,8 +2168,107 @@ def update_archive_file(filename):
             date_str = filename[len('rapport_hebdomadaire_'):-5]  # Remove prefix and .xlsx
         # Format 3: Horaires_Equipes_YYYY-MM-DD_au_YYYY-MM-DD.xlsx
         elif filename.startswith('Horaires_Equipes_') and filename.endswith('.xlsx'):
-            # This is a team schedule file, not a weekly report
-            return jsonify({"error": "Team schedule files cannot be updated through this endpoint"}), 400
+            # This is a team schedule file - handle regeneration
+            print(f"Regenerating team schedule file: {filename}")
+            
+            # Extract date range from filename
+            # Format: Horaires_Equipes_2025-08-20_au_2025-09-30.xlsx
+            filename_without_ext = filename.replace('.xlsx', '')
+            parts = filename_without_ext.split('_')
+            
+            if len(parts) >= 5 and parts[3] == 'au':
+                start_date_str = parts[2]
+                end_date_str = parts[4]
+                
+                try:
+                    # Validate dates
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+                    
+                    # Get teams data
+                    conn = get_db_connection()
+                    teams_query = '''
+                        SELECT t.id, t.name, t.description, t.color, t.created_at,
+                               COUNT(DISTINCT tm.employee_id) as member_count
+                        FROM teams t
+                        LEFT JOIN team_members tm ON t.id = tm.team_id
+                        GROUP BY t.id, t.name, t.description, t.color, t.created_at
+                        HAVING member_count > 0
+                        ORDER BY t.created_at DESC
+                    '''
+                    teams = conn.execute(teams_query).fetchall()
+                    
+                    # Build teams data with members
+                    teams_data = []
+                    for team in teams:
+                        members_query = '''
+                            SELECT tm.employee_id as id, w.name, w.employee_number
+                            FROM team_members tm
+                            JOIN workers w ON tm.employee_id = w.id
+                            WHERE tm.team_id = ?
+                            ORDER BY w.name
+                        '''
+                        members = conn.execute(members_query, (team['id'],)).fetchall()
+                        team_data = {
+                            'id': team['id'],
+                            'name': team['name'],
+                            'description': team['description'],
+                            'color': team['color'],
+                            'members': [{'id': m['id'], 'name': m['name'], 'employee_number': m['employee_number']} for m in members]
+                        }
+                        if team_data['members']:  # Only include teams with members
+                            teams_data.append(team_data)
+                    
+                    conn.close()
+                    
+                    # Call the team schedule export function directly
+                    from flask import request
+                    import json
+                    
+                    # Simulate the request data that the export function expects
+                    export_data = {
+                        'start_date': start_date_str,
+                        'end_date': end_date_str,
+                        'teams': teams_data
+                    }
+                    
+                    # Save original request and create mock request
+                    original_request = request
+                    
+                    # Create a mock request for the export function
+                    class MockRequest:
+                        def get_json(self):
+                            return export_data
+                    
+                    # Temporarily replace request
+                    import sys
+                    current_module = sys.modules[__name__]
+                    setattr(current_module, 'request', MockRequest())
+                    
+                    try:
+                        # Call the export function
+                        result = export_team_schedules()
+                        
+                        # Check if export was successful
+                        if hasattr(result, 'status_code') and result.status_code != 200:
+                            return result
+                        
+                        return jsonify({
+                            "message": f"Team schedule file regenerated successfully: {filename}",
+                            "filename": filename
+                        })
+                        
+                    finally:
+                        # Restore original request
+                        setattr(current_module, 'request', original_request)
+                        
+                except ValueError as e:
+                    return jsonify({"error": f"Invalid date format in filename: {str(e)}"}), 400
+                except Exception as e:
+                    print(f"Error regenerating team schedule: {e}")
+                    return jsonify({"error": f"Failed to regenerate team schedule: {str(e)}"}), 500
+            else:
+                return jsonify({"error": "Invalid team schedule filename format"}), 400
         
         if date_str:
             try:
@@ -2365,7 +2509,7 @@ def get_team_members(team_id):
         conn = get_db_connection()
         
         members_query = '''
-            SELECT tm.id, tm.employee_id, tm.role, w.name
+            SELECT tm.id, tm.employee_id, tm.role, w.name, w.employee_number
             FROM team_members tm
             JOIN workers w ON tm.employee_id = w.id
             WHERE tm.team_id = ?
@@ -2381,7 +2525,8 @@ def get_team_members(team_id):
                 'id': member['id'],
                 'employee_id': member['employee_id'],
                 'name': member['name'],
-                'role': member['role']
+                'role': member['role'],
+                'employee_number': member['employee_number']
             })
         
         return jsonify(members_list)
@@ -2401,15 +2546,29 @@ def add_team_member(team_id):
         
         conn = get_db_connection()
         
-        # Check if member already exists in team
-        existing = conn.execute('''
+        # Check if employee is already assigned to ANY team
+        existing_assignment = conn.execute('''
+            SELECT tm.team_id, t.name as team_name
+            FROM team_members tm
+            JOIN teams t ON tm.team_id = t.id
+            WHERE tm.employee_id = ?
+        ''', (data['employee_id'],)).fetchone()
+        
+        if existing_assignment:
+            conn.close()
+            return jsonify({
+                "error": f"L'employé est déjà assigné à l'équipe '{existing_assignment['team_name']}'. Un employé ne peut être assigné qu'à une seule équipe."
+            }), 400
+        
+        # Check if member already exists in current team (double check)
+        existing_in_team = conn.execute('''
             SELECT id FROM team_members 
             WHERE team_id = ? AND employee_id = ?
         ''', (team_id, data['employee_id'])).fetchone()
         
-        if existing:
+        if existing_in_team:
             conn.close()
-            return jsonify({"error": "Employee is already a member of this team"}), 400
+            return jsonify({"error": "L'employé fait déjà partie de cette équipe"}), 400
         
         # Add member to team
         conn.execute('''
@@ -2857,6 +3016,17 @@ def get_worker_schedule_by_date(worker_identifier):
         print(f"Error getting worker schedule: {e}")
         return jsonify({"error": str(e)}), 500
     
+
+from flask import send_from_directory
+
+@app.route('/')
+def serve_index():
+    return send_from_directory('../frontend', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('../frontend', path)
+
 
 
 # --- Run the Application ---

@@ -1071,3 +1071,169 @@ body:not(.dark) .team-shift-card:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     transition: all 0.2s ease;
 }
+
+/* Light Mode Styles - Applied when .dark class is NOT present */
+body:not(.dark) {
+    background-color: #f9fafb !important; /* gray-50 */
+    color: #111827 !important; /* gray-900 */
+}
+
+/* Sidebar in light mode */
+body:not(.dark) .fixed-sidebar {
+    background-color: #f3f4f6 !important; /* gray-100 */
+    border-right: 1px solid #d1d5db; /* gray-300 */
+}
+
+body:not(.dark) .fixed-sidebar h1 {
+    color: #111827 !important; /* gray-900 */
+}
+
+body:not(.dark) .nav-button {
+    color: #374151 !important; /* gray-700 */
+}
+
+body:not(.dark) .nav-button:hover {
+    background-color: #e5e7eb !important; /* gray-200 */
+}
+
+body:not(.dark) .nav-button.active {
+    background-color: #3b82f6 !important; /* blue-500 */
+    color: white !important;
+}
+
+/* Main content area in light mode */
+body:not(.dark) .main-content {
+    background-color: #ffffff !important; /* white */
+}
+
+/* Headers in light mode */
+body:not(.dark) .bg-gray-800 {
+    background-color: #f9fafb !important; /* gray-50 */
+    border-color: #e5e7eb !important; /* gray-200 */
+}
+
+body:not(.dark) .text-white {
+    color: #111827 !important; /* gray-900 */
+}
+
+body:not(.dark) .text-gray-300 {
+    color: #374151 !important; /* gray-700 */
+}
+
+body:not(.dark) .text-gray-400 {
+    color: #6b7280 !important; /* gray-500 */
+}
+
+body:not(.dark) .text-gray-200 {
+    color: #374151 !important; /* gray-700 */
+}
+
+/* Table styling in light mode */
+body:not(.dark) .table-container {
+    background-color: #ffffff !important; /* white */
+    border: 1px solid #e5e7eb !important; /* gray-200 */
+}
+
+body:not(.dark) .bg-gray-700 {
+    background-color: #f3f4f6 !important; /* gray-100 */
+}
+
+body:not(.dark) table {
+    background-color: #ffffff !important; /* white */
+}
+
+body:not(.dark) tbody tr:nth-child(even) {
+    background-color: #f9fafb !important; /* gray-50 */
+}
+
+body:not(.dark) tbody tr:hover {
+    background-color: #f3f4f6 !important; /* gray-100 */
+}
+
+/* Modal styling in light mode */
+body:not(.dark) #createTeamModal .bg-gray-800,
+body:not(.dark) #editTeamModal .bg-gray-800,
+body:not(.dark) #addEmployeeModal .bg-gray-800,
+body:not(.dark) #editEmployeeModal .bg-gray-800,
+body:not(.dark) #deleteEmployeeModal .bg-gray-800,
+body:not(.dark) #addScheduleModal .bg-gray-800,
+body:not(.dark) #employeeCalendarModal .bg-gray-800,
+body:not(.dark) #dayScheduleModal .bg-gray-800,
+body:not(.dark) #teamDetailModal .bg-gray-800,
+body:not(.dark) #addTeamShiftModal .bg-gray-800,
+body:not(.dark) #confirmationModal .bg-gray-800 {
+    background-color: #ffffff !important; /* white */
+    border: 1px solid #e5e7db !important; /* gray-200 */
+}
+
+body:not(.dark) .bg-gray-700 {
+    background-color: #f3f4f6 !important; /* gray-100 */
+    border-color: #d1d5db !important; /* gray-300 */
+}
+
+/* Form inputs in light mode */
+body:not(.dark) input[type="text"],
+body:not(.dark) input[type="email"], 
+body:not(.dark) input[type="tel"],
+body:not(.dark) input[type="date"],
+body:not(.dark) input[type="color"],
+body:not(.dark) textarea,
+body:not(.dark) select {
+    background-color: #ffffff !important; /* white */
+    color: #111827 !important; /* gray-900 */
+    border-color: #d1d5db !important; /* gray-300 */
+}
+
+body:not(.dark) input[type="text"]:focus,
+body:not(.dark) input[type="email"]:focus,
+body:not(.dark) input[type="tel"]:focus,
+body:not(.dark) input[type="date"]:focus,
+body:not(.dark) textarea:focus,
+body:not(.dark) select:focus {
+    border-color: #3b82f6 !important; /* blue-500 */
+    box-shadow: 0 0 0 1px #3b82f6 !important;
+}
+
+/* Label text in light mode */
+body:not(.dark) label {
+    color: #374151 !important; /* gray-700 */
+}
+
+/* Border colors in light mode */
+body:not(.dark) .border-gray-700 {
+    border-color: #e5e7eb !important; /* gray-200 */
+}
+
+body:not(.dark) .border-gray-600 {
+    border-color: #d1d5db !important; /* gray-300 */
+}
+
+/* Cards and containers in light mode */
+body:not(.dark) .bg-gray-800 {
+    background-color: #ffffff !important; /* white */
+}
+
+body:not(.dark) .bg-gray-900 {
+    background-color: #f9fafb !important; /* gray-50 */
+}
+
+/* Button styling adjustments for light mode */
+body:not(.dark) .bg-gray-600 {
+    background-color: #6b7280 !important; /* gray-500 */
+}
+
+body:not(.dark) .bg-gray-600:hover {
+    background-color: #4b5563 !important; /* gray-600 */
+}
+
+/* Ensure placeholder text is visible in light mode */
+body:not(.dark) input::placeholder,
+body:not(.dark) textarea::placeholder {
+    color: #9ca3af !important; /* gray-400 */
+}
+
+/* Copyright footer in light mode */
+body:not(.dark) .fixed-export-bar {
+    background-color: #f9fafb !important; /* gray-50 */
+    border-color: #e5e7eb !important; /* gray-200 */
+}

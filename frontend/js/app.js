@@ -61,6 +61,12 @@ function getCurrentWeekStart() {
 
 // Initialize the app - can be called after partials are loaded
 function initializeApp() {
+    // Set current year in copyright footer
+    const currentYearElement = document.getElementById('currentYear');
+    if (currentYearElement) {
+        currentYearElement.textContent = new Date().getFullYear();
+    }
+    
     const views = document.querySelectorAll('.view');
     const navButtons = document.querySelectorAll('.nav-button');
 
@@ -1503,9 +1509,9 @@ function displayDetailedScheduleModal(date, scheduleData, employee, dayData) {
                                 <option value="X" ${currentData.activityType === 'X' ? 'selected' : ''}>X - Garde</option>
                                 <option value="S" ${currentData.activityType === 'S' ? 'selected' : ''}>S - Soutien de jour</option>
                                 <option value="RP" ${currentData.activityType === 'RP' ? 'selected' : ''}>RP - Rencontre Prénatale</option>
-                                <option value="F" ${currentData.activityType === 'F' ? 'selected' : ''}>F - Fin d'équipe de nuit</option>
-                                <option value="C" ${currentData.activityType === 'C' ? 'selected' : ''}>C - Congé</option>
-                                <option value="" ${!currentData.activityType || currentData.activityType === '' ? 'selected' : ''}>Vide - Repos</option>
+                                <option value="M" ${currentData.activityType === 'M' ? 'selected' : ''}>M - Maladie</option>
+                                <option value="V" ${currentData.activityType === 'V' ? 'selected' : ''}>V - Vacances</option>
+                                
                             </select>
                         </div>
                         <div>
@@ -1556,7 +1562,9 @@ function displayBasicScheduleModal(date, dayData, employee) {
         'X': 'Garde',
         'S': 'Soutien de jour', 
         'RP': 'Rencontre Prénatale',
-        'F': 'Fin d\'équipe de nuit'
+        'F': 'Fin d\'équipe de nuit',
+        'M': 'Maladie',
+        'V': 'Vacances'
     };
     
     let details = `<strong>Employé:</strong> ${employee.name}<br>`;
@@ -1813,9 +1821,8 @@ function showEditDayScheduleModal(date, employeeId, currentData) {
                             <option value="X" ${activityType === 'X' ? 'selected' : ''}>X - Garde</option>
                             <option value="S" ${activityType === 'S' ? 'selected' : ''}>S - Soutien de jour</option>
                             <option value="RP" ${activityType === 'RP' ? 'selected' : ''}>RP - Rencontre Prénatale</option>
-                            <option value="F" ${activityType === 'F' ? 'selected' : ''}>F - Fin d'équipe de nuit</option>
-                            <option value="C" ${activityType === 'C' ? 'selected' : ''}>C - Congé</option>
-                            <option value="" ${!activityType || activityType === '' ? 'selected' : ''}>Vide - Repos</option>
+                            <option value="M" ${activityType === 'M' ? 'selected' : ''}>M - Maladie</option>
+                            <option value="V" ${activityType === 'V' ? 'selected' : ''}>V - Vacances</option>
                         </select>
                     </div>
                     <div>
@@ -2141,22 +2148,45 @@ let isCreatingTeam = false; // Prevent multiple submissions
 
 // Load teams from API or local storage
 function loadTeams() {
-    console.log('Loading teams...');
-    // For now, use local storage. Later this can be connected to a backend API
-    const storedTeams = localStorage.getItem('timeplanner_teams');
-    console.log('Stored teams from localStorage:', storedTeams);
+    console.log('Loading teams from backend...');
     
-    if (storedTeams) {
-        teams = JSON.parse(storedTeams);
-        console.log('Parsed teams:', teams);
-    } else {
-        teams = [];
-        // Create sample teams for demonstration if no teams exist
-        if (teams.length === 0) {
-            console.log('No teams found, team management ready for use');
-        }
-    }
-    displayTeams();
+    // Fetch teams from backend API
+    fetch('http://127.0.0.1:5001/api/teams')
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Failed to fetch teams from backend');
+            }
+        })
+        .then(data => {
+            console.log('Teams loaded from backend:', data);
+            teams = data;
+            
+            // Save to localStorage as backup
+            localStorage.setItem('timeplanner_teams', JSON.stringify(teams));
+            
+            displayTeams();
+        })
+        .catch(error => {
+            console.error('Error loading teams from backend:', error);
+            
+            // Fallback to localStorage if backend is unavailable
+            console.log('Falling back to localStorage...');
+            const storedTeams = localStorage.getItem('timeplanner_teams');
+            console.log('Stored teams from localStorage:', storedTeams);
+            
+            if (storedTeams) {
+                teams = JSON.parse(storedTeams);
+                console.log('Parsed teams from localStorage:', teams);
+            } else {
+                teams = [];
+                console.log('No teams found, team management ready for use');
+            }
+            
+            displayTeams();
+            showNotification('Équipes chargées depuis le cache local (backend indisponible)', 'warning');
+        });
 }
 
 // Save teams to local storage
@@ -2185,15 +2215,26 @@ function displayTeams() {
     teamsEmpty.classList.add('hidden');
     
     teamsGrid.innerHTML = teams.map(team => {
-        // Get current employee data for team members to ensure names are up-to-date
-        const membersWithCurrentData = team.members.map(member => {
-            const currentEmployee = employees.find(emp => emp.id === member.id);
-            return currentEmployee ? {
-                ...member,
-                name: currentEmployee.name,
-                employee_number: currentEmployee.employee_number
-            } : member;
-        });
+        // Handle both frontend (with members array) and backend (with member_count) data structures
+        let membersWithCurrentData = [];
+        let memberCount = 0;
+        
+        if (team.members && Array.isArray(team.members)) {
+            // Frontend data structure (from localStorage)
+            membersWithCurrentData = team.members.map(member => {
+                const currentEmployee = employees.find(emp => emp.id === member.id);
+                return currentEmployee ? {
+                    ...member,
+                    name: currentEmployee.name,
+                    employee_number: currentEmployee.employee_number
+                } : member;
+            });
+            memberCount = membersWithCurrentData.length;
+        } else {
+            // Backend data structure (from API)
+            memberCount = team.member_count || 0;
+            membersWithCurrentData = []; // We don't have individual member details from backend
+        }
         
         return `
         <div class="bg-gray-800 rounded-lg border border-gray-600 p-6 hover:bg-gray-750 transition-colors">
@@ -2217,15 +2258,19 @@ function displayTeams() {
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-300">Membres</span>
-                    <span class="text-xs text-gray-500">${membersWithCurrentData.length} membre(s)</span>
+                    <span class="text-xs text-gray-500">${memberCount} membre(s)</span>
                 </div>
                 <div class="space-y-1">
-                    ${membersWithCurrentData.slice(0, 3).map(member => `
+                    ${membersWithCurrentData.length > 0 ? membersWithCurrentData.slice(0, 3).map(member => `
                         <div class="text-sm text-gray-300 flex items-center">
                             <i class="fa-solid fa-user text-xs mr-2 text-gray-500"></i>
                             ${member.name}
                         </div>
-                    `).join('')}
+                    `).join('') : `
+                        <div class="text-sm text-gray-500 italic">
+                            ${memberCount > 0 ? `${memberCount} membre(s) assigné(s)` : 'Aucun membre assigné'}
+                        </div>
+                    `}
                     ${membersWithCurrentData.length > 3 ? `
                         <div class="text-xs text-gray-500">
                             +${membersWithCurrentData.length - 3} autre(s)
@@ -2364,31 +2409,54 @@ function createTeam(event) {
     }
     
     const newTeam = {
-        id: Date.now(), // Simple ID generation
         name,
         description,
-        color,
-        members: [],
-        createdAt: new Date().toISOString(),
-        weekendRotationIndex: 0 // Track current weekend rotation
+        color
     };
     
-    console.log('Creating new team:', newTeam);
-    teams.push(newTeam);
-    console.log('Teams array after push:', teams);
+    console.log('Creating new team via API:', newTeam);
     
-    saveTeams();
-    displayTeams();
-    closeCreateTeamModal();
+    // Show loading notification
+    showNotification('Création de l\'équipe en cours...', 'info');
     
-    // Re-enable button and reset flag
-    if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Créer';
-    }
-    isCreatingTeam = false;
-    
-    showNotification(`Équipe "${name}" créée avec succès`, 'success');
+    // Make API call to create team in backend
+    fetch('http://127.0.0.1:5001/api/teams', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTeam)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Erreur lors de la création de l\'équipe');
+            });
+        }
+    })
+    .then(data => {
+        console.log('Team created successfully:', data);
+        
+        // Reload teams from backend to get the new team with its ID
+        loadTeams();
+        closeCreateTeamModal();
+        
+        showNotification(`Équipe "${name}" créée avec succès`, 'success');
+    })
+    .catch(error => {
+        console.error('Error creating team:', error);
+        showNotification(error.message, 'error');
+    })
+    .finally(() => {
+        // Re-enable button and reset flag
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Créer';
+        }
+        isCreatingTeam = false;
+    });
 }
 
 // Edit team
@@ -2424,45 +2492,124 @@ function closeEditTeamModal() {
     currentTeamId = null;
 }
 
+// Test function to verify API connectivity from frontend
+function testTeamAPI() {
+    console.log('Testing team API connectivity...');
+    
+    fetch('http://127.0.0.1:5001/api/teams')
+        .then(response => {
+            console.log('API test response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('API test success, teams:', data);
+            showNotification('API connectivity test successful!', 'success');
+        })
+        .catch(error => {
+            console.error('API test failed:', error);
+            showNotification('API connectivity test failed: ' + error.message, 'error');
+        });
+}
+
 // Save team changes
 function saveTeamChanges(event) {
-    if (event) event.preventDefault();
+    console.log('=== SAVE TEAM CHANGES CALLED ===');
+    console.log('Event object:', event);
+    console.log('Event type:', event ? event.type : 'no event');
+    
+    if (event) {
+        console.log('Preventing default form submission');
+        event.preventDefault();
+        event.stopPropagation();
+    }
     
     const teamId = parseInt(document.getElementById('editTeamId').value);
     const team = teams.find(t => t.id === teamId);
     
+    console.log('Editing team ID:', teamId);
+    console.log('Found team:', team);
+    console.log('Current teams array:', teams);
+    
     if (!team) {
+        console.error('Team not found for ID:', teamId);
         showNotification('Équipe non trouvée', 'error');
         return;
     }
     
-    const name = document.getElementById('editTeamName').value.trim();
-    const description = document.getElementById('editTeamDescription').value.trim();
-    const color = document.getElementById('editTeamColor').value;
+    const nameElement = document.getElementById('editTeamName');
+    const descElement = document.getElementById('editTeamDescription');
+    const colorElement = document.getElementById('editTeamColor');
+    
+    console.log('Form elements:', { nameElement, descElement, colorElement });
+    
+    const name = nameElement ? nameElement.value.trim() : '';
+    const description = descElement ? descElement.value.trim() : '';
+    const color = colorElement ? colorElement.value : '#3b82f6';
+    
+    console.log('Form values:', { name, description, color });
     
     if (!name) {
+        console.error('Team name is empty');
         showNotification('Le nom de l\'équipe est requis', 'error');
-        document.getElementById('editTeamName').focus();
+        if (nameElement) nameElement.focus();
         return;
     }
     
     // Check for duplicate team names (excluding current team)
-    if (teams.some(t => t.id !== teamId && t.name.toLowerCase() === name.toLowerCase())) {
+    const duplicateTeam = teams.find(t => t.id !== teamId && t.name.toLowerCase() === name.toLowerCase());
+    if (duplicateTeam) {
+        console.error('Duplicate team name found:', duplicateTeam);
         showNotification('Une équipe avec ce nom existe déjà', 'error');
-        document.getElementById('editTeamName').focus();
+        if (nameElement) nameElement.focus();
         return;
     }
     
-    team.name = name;
-    team.description = description;
-    team.color = color;
-    team.updatedAt = new Date().toISOString();
+    // Show loading notification
+    console.log('Starting API call...');
+    showNotification('Modification de l\'équipe en cours...', 'info');
     
-    saveTeams();
-    displayTeams();
-    closeEditTeamModal();
+    console.log('Making API call to update team:', teamId);
     
-    showNotification(`Équipe "${name}" modifiée avec succès`, 'success');
+    // Make API call to update team in backend
+    fetch(`http://127.0.0.1:5001/api/teams/${teamId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            description: description,
+            color: color
+        })
+    })
+    .then(response => {
+        console.log('API response status:', response.status);
+        console.log('API response object:', response);
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(err => {
+                console.error('API error response:', err);
+                throw new Error(err.error || 'Erreur lors de la modification de l\'équipe');
+            });
+        }
+    })
+    .then(data => {
+        console.log('Team updated successfully:', data);
+        
+        // Reload teams from backend to get the updated data
+        console.log('Reloading teams...');
+        loadTeams();
+        closeEditTeamModal();
+        
+        showNotification(`Équipe "${name}" modifiée avec succès`, 'success');
+    })
+    .catch(error => {
+        console.error('Error updating team:', error);
+        showNotification(error.message, 'error');
+    });
+    
+    console.log('=== END SAVE TEAM CHANGES ===');
 }
 
 // Delete team
@@ -2477,11 +2624,34 @@ function deleteTeam(teamId) {
         return;
     }
     
-    teams = teams.filter(t => t.id !== teamId);
-    saveTeams();
-    displayTeams();
+    // Show loading notification
+    showNotification('Suppression de l\'équipe en cours...', 'info');
     
-    showNotification(`Équipe "${team.name}" supprimée avec succès`, 'success');
+    // Make API call to delete team in backend
+    fetch(`http://127.0.0.1:5001/api/teams/${teamId}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Erreur lors de la suppression de l\'équipe');
+            });
+        }
+    })
+    .then(data => {
+        console.log('Team deleted successfully:', data);
+        
+        // Reload teams from backend
+        loadTeams();
+        
+        showNotification(`Équipe "${team.name}" supprimée avec succès`, 'success');
+    })
+    .catch(error => {
+        console.error('Error deleting team:', error);
+        showNotification(error.message, 'error');
+    });
 }
 
 // View team detail
@@ -2506,6 +2676,12 @@ function viewTeamDetail(teamId) {
         teamDetailHeader.style.background = `linear-gradient(to right, ${team.color}, ${adjustColor(team.color, -20)})`;
     }
     
+    // Show modal first - this ensures it opens even if there are errors in display functions
+    const modal = document.getElementById('teamDetailModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+    
     // Add event listeners to the action buttons
     const refreshBtn = document.getElementById('refreshTeamBtn');
     const addMemberBtn = document.getElementById('addMemberBtn');
@@ -2522,16 +2698,17 @@ function viewTeamDetail(teamId) {
         addMemberBtn.onclick = () => addMemberToTeam();
     }
     
-    // Display team members
-    displayTeamMembers(team);
+    // Try to display team members and shifts, but don't let errors prevent modal from showing
+    try {
+        displayTeamMembers(team);
+    } catch (error) {
+        console.error('Error displaying team members:', error);
+    }
     
-    // Display team shifts
-    displayTeamShifts(team);
-    
-    // Show modal
-    const modal = document.getElementById('teamDetailModal');
-    if (modal) {
-        modal.classList.remove('hidden');
+    try {
+        displayTeamShifts(team);
+    } catch (error) {
+        console.error('Error displaying team shifts:', error);
     }
 }
 
@@ -2553,34 +2730,75 @@ function displayTeamMembers(team) {
         return;
     }
     
-    // Get current employee data from the database to ensure names are up-to-date
-    const membersWithCurrentData = team.members.map(member => {
-        // Find the current employee data by ID to get the latest name
-        const currentEmployee = employees.find(emp => emp.id === member.id);
-        if (currentEmployee) {
-            return {
-                ...member,
-                name: currentEmployee.name, // Use current name from database
-                employee_number: currentEmployee.employee_number // Use current employee number
-            };
-        }
-        // Fallback to stored data if employee not found (shouldn't happen)
-        return member;
-    });
-    
+    // Check if we have members data from frontend structure or need to fetch from backend
+    if (team.members && Array.isArray(team.members)) {
+        // Frontend data structure - use existing logic
+        const membersWithCurrentData = team.members.map(member => {
+            // Find the current employee data by ID to get the latest name
+            const currentEmployee = employees.find(emp => emp.id === member.id);
+            if (currentEmployee) {
+                return {
+                    ...member,
+                    name: currentEmployee.name, // Use current name from database
+                    employee_number: currentEmployee.employee_number // Use current employee number
+                };
+            }
+            // Fallback to stored data if employee not found (shouldn't happen)
+            return member;
+        });
+        
+        displayMembersInContainer(container, membersWithCurrentData);
+    } else {
+        // Backend data structure - need to fetch team members from API
+        console.log('Fetching team members from backend for team:', team.id);
+        
+        fetch(`http://127.0.0.1:5001/api/teams/${team.id}/members`)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Failed to fetch team members');
+                }
+            })
+            .then(members => {
+                console.log('Team members loaded from backend:', members);
+                displayMembersInContainer(container, members);
+            })
+            .catch(error => {
+                console.error('Error loading team members:', error);
+                // Show empty state or member count only
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fa-solid fa-users text-4xl text-gray-600 mb-4"></i>
+                        <p class="text-gray-400">
+                            ${team.member_count > 0 ? 
+                                `Cette équipe a ${team.member_count} membre(s) assigné(s)` : 
+                                'Aucun membre assigné à cette équipe'}
+                        </p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Utilisez le bouton "Ajouter Membre" pour assigner des employés
+                        </p>
+                    </div>
+                `;
+            });
+    }
+}
+
+// Helper function to display members in container
+function displayMembersInContainer(container, membersWithCurrentData) {
     const membersHtml = membersWithCurrentData.length > 0 ? 
         membersWithCurrentData.map((member, index) => `
             <div class="flex items-center justify-between p-3 bg-gray-600 rounded-lg">
                 <div class="flex items-center space-x-3">
                     <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                        ${member.name.charAt(0).toUpperCase()}
+                        ${member.name ? member.name.charAt(0).toUpperCase() : '?'}
                     </div>
                     <div>
-                        <div class="text-white font-medium">${member.name}</div>
+                        <div class="text-white font-medium">${member.name || 'Nom inconnu'}</div>
                         <div class="text-gray-400 text-xs">#${member.employee_number || 'N/A'}</div>
                     </div>
                 </div>
-                <button onclick="removeMemberFromTeam(${team.id}, ${member.id})" class="text-red-400 hover:text-red-300 text-sm">
+                <button onclick="removeMemberFromTeam(currentTeamId, ${member.id})" class="text-red-400 hover:text-red-300 text-sm">
                     <i class="fa-solid fa-times"></i>
                 </button>
             </div>
@@ -2599,7 +2817,11 @@ function displayTeamShifts(team) {
         return;
     }
     
-    if (team.members.length === 0) {
+    // Check if team has members (handle both frontend and backend data structures)
+    const hasMembers = (team.members && team.members.length > 0) || 
+                      (team.teamMembers && team.teamMembers.length > 0);
+    
+    if (!hasMembers) {
         container.innerHTML = `
             <div class="text-center text-gray-400 py-4">
                 Ajoutez des membres pour voir les horaires
@@ -2642,6 +2864,48 @@ function displayTeamShifts(team) {
 
 // Generate team schedule preview based on universal patterns
 function generateTeamSchedulePreview(team) {
+    // Handle both frontend (members array) and backend (member_count) data structures
+    if (!team.members && (!team.member_count || team.member_count === 0)) {
+        return {
+            weekdays: [],
+            weekend: { current: 'N/A', next: 'N/A' }
+        };
+    }
+    
+    // For backend structure, we can only show generic patterns
+    if (!team.members && team.member_count > 0) {
+        const memberCount = team.member_count;
+        const weekdaySchedule = [];
+        
+        if (memberCount === 1) {
+            weekdaySchedule.push({ member: "Membre 1", days: "Lun-Ven" });
+        } else if (memberCount === 2) {
+            weekdaySchedule.push(
+                { member: "Membre 1", days: "Lun-Mer" },
+                { member: "Membre 2", days: "Mer-Ven" }
+            );
+        } else if (memberCount >= 3) {
+            weekdaySchedule.push(
+                { member: "Membre 1", days: "Lun-Mer" },
+                { member: "Membre 2", days: "Mar-Jeu" },
+                { member: "Membre 3", days: "Mer-Ven" }
+            );
+            
+            for (let i = 3; i < memberCount; i++) {
+                const pattern = i % 3;
+                if (pattern === 0) weekdaySchedule.push({ member: `Membre ${i + 1}`, days: "Lun-Mer" });
+                else if (pattern === 1) weekdaySchedule.push({ member: `Membre ${i + 1}`, days: "Mar-Jeu" });
+                else weekdaySchedule.push({ member: `Membre ${i + 1}`, days: "Mer-Ven" });
+            }
+        }
+        
+        return {
+            weekdays: weekdaySchedule,
+            weekend: { current: 'Membre 1', next: 'Membre 2' }
+        };
+    }
+    
+    // For frontend structure with actual member data
     const memberCount = team.members.length;
     const members = team.members;
     
@@ -2714,10 +2978,32 @@ function addMemberToTeam() {
         return;
     }
     
-    // Show available employees
-    const availableEmployees = employees.filter(emp => 
-        !team.members.some(member => member.id === emp.id)
-    );
+    // Fetch current team members from backend API to get accurate member list
+    fetch(`http://127.0.0.1:5001/api/teams/${currentTeamId}/members`)
+        .then(response => response.json())
+        .then(teamMembers => {
+            // Show available employees (those not already in the team)
+            const availableEmployees = employees.filter(emp => 
+                !teamMembers.some(member => member.employee_id === emp.id)
+            );
+            
+            if (availableEmployees.length === 0) {
+                showNotification('Aucun employé disponible à ajouter à cette équipe', 'warning');
+                return;
+            }
+            
+            // Show the employee selection dialog
+            showEmployeeSelectionDialog(availableEmployees, team);
+        })
+        .catch(error => {
+            console.error('Error fetching team members:', error);
+            // Fallback: show all employees if we can't fetch team members
+            showEmployeeSelectionDialog(employees, team);
+        });
+}
+
+// Helper function to show employee selection dialog
+function showEmployeeSelectionDialog(availableEmployees, team) {
     
     if (availableEmployees.length === 0) {
         showNotification('Aucun employé disponible à ajouter à cette équipe', 'warning');
@@ -2907,51 +3193,63 @@ function confirmAddMember() {
     // Get the button reference early for state management
     const addButton = document.querySelector('#memberSelect').closest('.fixed').querySelector('button[onclick="confirmAddMember()"]');
     
-    // Check if employee is already in the team (double-check)
-    if (team.members.some(member => member.id == employee.id)) { // Use == for flexible comparison
-        showNotification(`${employee.name} fait déjà partie de cette équipe`, 'warning');
-        // Re-enable button since we're not proceeding
-        if (addButton) {
-            addButton.disabled = false;
-            addButton.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Ajouter';
-        }
-        return;
-    }
+    // Note: We don't need to check if employee is already in team here 
+    // since we already filtered them out in addMemberToTeam function
     
     // Disable the button to prevent double-clicks
     if (addButton) {
         addButton.disabled = true;
         addButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Ajout...';
     }
-    
-    // Add member to team
-    team.members.push({
-        id: employee.id,
-        name: employee.name,
-        employee_number: employee.employee_number
-    });
-    
-    // Save and update
-    saveTeams();
-    displayTeamMembers(team);
-    displayTeamShifts(team);
-    
-    // Reset button state before closing modal
-    if (addButton) {
-        addButton.disabled = false;
-        addButton.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Ajouter';
-    }
-    
-    // Small delay to show success state before closing
-    setTimeout(() => {
+
+    // Add member to team using backend API
+    fetch(`http://127.0.0.1:5001/api/teams/${currentTeamId}/members`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            employee_id: employee.id,
+            role: 'member' // Default role
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Erreur lors de l\'ajout du membre');
+            });
+        }
+    })
+    .then(data => {
+        console.log('Member added successfully:', data);
+        
+        // Refresh the team display
+        displayTeamMembers(team);
+        displayTeamShifts(team);
+        
+        // Reload teams to get updated member count
+        loadTeams();
+        
+        showNotification(`${employee.name} a été ajouté(e) à l'équipe`, 'success');
+        
         // Close the modal
-        const modal = document.querySelector('.fixed.inset-0');
+        const modal = document.querySelector('#memberSelect').closest('.fixed');
         if (modal) {
             modal.remove();
         }
-    }, 200);
-    
-    showNotification(`${employee.name} a été ajouté à l'équipe avec succès`, 'success');
+    })
+    .catch(error => {
+        console.error('Error adding member:', error);
+        showNotification(error.message, 'error');
+        
+        // Re-enable button on error
+        if (addButton) {
+            addButton.disabled = false;
+            addButton.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Ajouter';
+        }
+    });
 }
 
 // Close add member modal
@@ -2990,7 +3288,9 @@ function generateTeamSchedule(teamId) {
         return;
     }
     
-    if (team.members.length === 0) {
+    // Check members based on data structure (frontend vs backend)
+    const hasMembers = team.members ? team.members.length > 0 : (team.member_count || 0) > 0;
+    if (!hasMembers) {
         showNotification('Aucun membre dans cette équipe pour générer des horaires', 'error');
         return;
     }
@@ -3010,107 +3310,11 @@ function generateTeamSchedule(teamId) {
     document.getElementById('scheduleStartDate').value = startOfWeek.toISOString().split('T')[0];
     document.getElementById('scheduleEndDate').value = endOfWeek.toISOString().split('T')[0];
     
-    // Populate weekend rotation section
-    populateWeekendRotation(team);
-    
-    // Add event listeners to date inputs to refresh weekend rotation when dates change
-    const startDateInput = document.getElementById('scheduleStartDate');
-    const endDateInput = document.getElementById('scheduleEndDate');
-    
-    const updateWeekendRotation = () => {
-        setTimeout(() => populateWeekendRotation(team), 100); // Delay to ensure values are updated
-    };
-    
-    startDateInput.addEventListener('change', updateWeekendRotation);
-    endDateInput.addEventListener('change', updateWeekendRotation);
-    
     // Show modal
     document.getElementById('scheduleRangeModal').classList.remove('hidden');
 }
 
-// Populate weekend rotation assignments
-function populateWeekendRotation(team) {
-    const container = document.getElementById('weekendRotationContainer');
-    if (!container || !team.members || team.members.length === 0) {
-        return;
-    }
-    
-    // Calculate number of weekends in the selected date range
-    const startDate = document.getElementById('scheduleStartDate').value;
-    const endDate = document.getElementById('scheduleEndDate').value;
-    
-    if (!startDate || !endDate) {
-        container.innerHTML = '<p class="text-gray-400 text-sm">Sélectionnez d\'abord les dates pour configurer la rotation</p>';
-        return;
-    }
-    
-    const weekends = calculateWeekendsInRange(startDate, endDate);
-    
-    if (weekends.length === 0) {
-        container.innerHTML = '<p class="text-gray-400 text-sm">Aucune fin de semaine dans la période sélectionnée</p>';
-        return;
-    }
-    
-    // Generate weekend assignment dropdowns
-    const weekendAssignments = weekends.map((weekend, index) => {
-        const defaultMemberIndex = index % team.members.length;
-        const options = team.members.map((member, memberIndex) => 
-            `<option value="${memberIndex}" ${memberIndex === defaultMemberIndex ? 'selected' : ''}>
-                ${member.name}
-            </option>`
-        ).join('');
-        
-        return `
-            <div class="flex items-center justify-between p-3 bg-gray-600 rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-calendar-week text-blue-400"></i>
-                    <div>
-                        <div class="text-white font-medium">Fin de semaine ${index + 1}</div>
-                        <div class="text-gray-300 text-sm">${formatDateRange(weekend.start, weekend.end)}</div>
-                    </div>
-                </div>
-                <select 
-                    id="weekend_${index}" 
-                    class="bg-gray-700 border border-gray-500 rounded px-3 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    ${options}
-                </select>
-            </div>
-        `;
-    }).join('');
-    
-    container.innerHTML = weekendAssignments;
-}
-
-// Calculate weekends in date range
-function calculateWeekendsInRange(startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const weekends = [];
-    
-    // Find first Saturday in range
-    let current = new Date(start);
-    while (current <= end) {
-        if (current.getDay() === 6) { // Saturday
-            const saturday = new Date(current);
-            const sunday = new Date(current);
-            sunday.setDate(saturday.getDate() + 1);
-            
-            // Only include if both Saturday and Sunday are in range
-            if (sunday <= end) {
-                weekends.push({
-                    start: saturday.toISOString().split('T')[0],
-                    end: sunday.toISOString().split('T')[0]
-                });
-            }
-        }
-        current.setDate(current.getDate() + 1);
-    }
-    
-    return weekends;
-}
-
-// Format date range for display
+// Helper function to format date range for display
 function formatDateRange(startDate, endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -3433,37 +3637,68 @@ function displayTeamSchedules() {
         return;
     }
     
-    // Get teams from localStorage
-    loadTeams(); // Ensure teams are loaded
+    // Get teams from backend API and wait for them to load
+    console.log('Loading teams before displaying schedules...');
     
-    // Always load schedules data for the specific date range
-    console.log('Loading team schedules for date range...');
-    // Use the team schedule API to get data for the entire date range (now includes vacation entries)
-    const startDateStr = getLocalDateString(startDate);
-    const endDateStr = getLocalDateString(endDate);
-    const url = `http://127.0.0.1:5001/api/schedule/team-range?start_date=${startDateStr}&end_date=${endDateStr}`;
+    // Check if teams are already loaded
+    if (teams && teams.length > 0) {
+        // Teams already loaded, proceed immediately
+        loadSchedulesAndDisplay();
+    } else {
+        // Load teams from backend first
+        fetch('http://127.0.0.1:5001/api/teams')
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Failed to fetch teams');
+                }
+            })
+            .then(data => {
+                console.log('Teams loaded for schedules:', data);
+                teams = data;
+                loadSchedulesAndDisplay();
+            })
+            .catch(error => {
+                console.error('Error loading teams for schedules:', error);
+                // Show empty state
+                teamsGrid.innerHTML = '';
+                teamsEmpty.classList.remove('hidden');
+            });
+    }
+    
+    async function loadSchedulesAndDisplay() {
+        // Load schedules data for the specific date range
+        console.log('Loading team schedules for date range...');
+        const startDateStr = getLocalDateString(startDate);
+        const endDateStr = getLocalDateString(endDate);
+        const url = `http://127.0.0.1:5001/api/schedule/team-range?start_date=${startDateStr}&end_date=${endDateStr}`;
 
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
             teamScheduleData = data || [];
             console.log('Loaded team schedule data:', teamScheduleData);
             // Continue with display after loading schedules
-            continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate);
-        })
-        .catch(error => {
+            await continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate);
+        } catch (error) {
             console.error('Error loading team schedules:', error);
             teamScheduleData = [];
             // Continue anyway but with empty schedules
-            continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate);
-        });
+            await continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate);
+        }
+    }
 }
 
 // Continue displaying team schedules after schedules are loaded
-function continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate) {
-    const teamsWithMembers = teams.filter(team => team.members && team.members.length > 0);
+async function continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate) {
+    // Show all teams initially, let individual team generation handle empty teams
+    const teamsToDisplay = teams.filter(team => team && team.name);
     
-    if (teamsWithMembers.length === 0) {
+    console.log(`Teams to display: ${teamsToDisplay.length}`, teamsToDisplay.map(t => t.name));
+    
+    if (teamsToDisplay.length === 0) {
+        console.log('No teams to display, showing empty message');
         teamsGrid.innerHTML = '';
         teamsEmpty.classList.remove('hidden');
         return;
@@ -3481,15 +3716,19 @@ function continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate)
     
     // Generate schedule table for each team and check for conflicts
     let allConflicts = [];
-    const teamScheduleTables = teamsWithMembers.map(team => {
+    const teamScheduleTablesPromises = teamsToDisplay.map(async team => {
         // Check for conflicts in this team
         const teamConflicts = verifyTeamScheduleConflicts(team, startDate, endDate);
         if (teamConflicts.length > 0) {
             allConflicts.push({ team: team.name, conflicts: teamConflicts });
         }
         
-        return generateTeamScheduleTable(team, startDate, endDate, dateRange);
-    }).join('');
+        return await generateTeamScheduleTable(team, startDate, endDate, dateRange);
+    });
+    
+    const teamScheduleTables = (await Promise.all(teamScheduleTablesPromises))
+        .filter(table => table && table.trim() !== '')
+        .join(''); // Filter out empty tables
     
     // Add conflicts warning if any found
     let conflictsWarning = '';
@@ -3498,6 +3737,17 @@ function continueDisplayTeamSchedules(teamsGrid, teamsEmpty, startDate, endDate)
     }
     
     teamsGrid.innerHTML = conflictsWarning + teamScheduleTables;
+    
+    // Debug logging
+    console.log('Final team schedule tables length:', teamScheduleTables.length);
+    console.log('Teams grid innerHTML length:', teamsGrid.innerHTML.length);
+    
+    if (teamScheduleTables.length === 0) {
+        console.log('No team schedule tables generated');
+        teamsEmpty.classList.remove('hidden');
+    } else {
+        teamsEmpty.classList.add('hidden');
+    }
 }
 
 // Generate conflicts warning display
@@ -3536,8 +3786,61 @@ function generateConflictsWarning(allConflicts) {
 }
 
 // Generate team schedule table using actual schedule data from Gestion des Horaires
-function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
-    const weekdays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+async function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
+    const weekdays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    
+    console.log(`Processing team: ${team.name}, members:`, team.members);
+    
+    // For teams loaded from backend API, we need to fetch actual member data
+    if (!team.members || !Array.isArray(team.members)) {
+        // Return placeholder that will be replaced once members are loaded
+        const teamCardId = `team-schedule-${team.id}`;
+        
+        console.log(`Team ${team.name} needs member loading, creating placeholder`);
+        
+        // Fetch team members asynchronously and update the display
+        setTimeout(async () => {
+            try {
+                const response = await fetch(`http://127.0.0.1:5001/api/teams/${team.id}/members`);
+                const members = await response.json();
+                console.log(`Loaded ${members.length} members for team ${team.name}`);
+                
+                // Skip if no members
+                if (members.length === 0) {
+                    console.log(`Removing empty team ${team.name}`);
+                    const container = document.getElementById(teamCardId);
+                    if (container) {
+                        container.remove();
+                    }
+                    return;
+                }
+                
+                // Update the team object with members
+                team.members = members;
+                // Regenerate the table with member data
+                const updatedTable = await generateActualTeamTable(team, startDate, endDate, dateRange);
+                const container = document.getElementById(teamCardId);
+                if (container) {
+                    container.outerHTML = updatedTable;
+                }
+            } catch (error) {
+                console.error(`Error loading members for team ${team.name}:`, error);
+            }
+        }, 100);
+        
+        return `<div id="${teamCardId}" class="team-schedule-loading bg-gray-800 rounded-lg p-4 mb-6 text-white">Chargement de ${team.name}...</div>`;
+    }
+
+    // Skip teams without members
+    if (!team.members || team.members.length === 0) {
+        console.log(`Skipping team ${team.name} - no members`);
+        return '';
+    }
+
+    console.log(`Generating actual table for team ${team.name} with ${team.members.length} members`);
+    return await generateActualTeamTable(team, startDate, endDate, dateRange);
+}async function generateActualTeamTable(team, startDate, endDate, dateRange) {
+    const weekdays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
     
     // Get current employee data for team members to ensure names are up-to-date
@@ -3549,38 +3852,101 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
             employee_number: currentEmployee.employee_number
         } : member;
     });
-    
-    // Get actual schedule data for each team member
+
+    // Get actual schedule data for each team member from the already loaded teamScheduleData
     const memberSchedules = teamMembersWithCurrentData.map(member => {
         const memberSchedule = {};
         
-        // Fetch actual schedule data for this member from the global schedules array
-        // The schedules array contains data from "Gestion des Horaires"
+        console.log(`Processing schedule for member: ${member.name} (ID: ${member.id})`);
+        
+        // Debug: Show sample of available schedule data
+        if (teamScheduleData && teamScheduleData.length > 0) {
+            console.log('Sample schedule entries:', teamScheduleData.slice(0, 3));
+            console.log('Full structure of first entry:', JSON.stringify(teamScheduleData[0], null, 2));
+        }
+        
         dateRange.forEach(date => {
             const dateStr = getLocalDateString(date);
             
-            // Look for schedule data for this member on this date
-            // Use the same schedules array that powers "Gestion des Horaires"
-            const memberScheduleData = findMemberScheduleFromArray(member, dateStr);
-            
-            if (memberScheduleData) {
-                memberSchedule[dateStr] = memberScheduleData;
+            // Look for schedule entry for this member and date in the already loaded teamScheduleData
+            if (teamScheduleData && Array.isArray(teamScheduleData)) {
+                
+                // Find the employee data that matches this team member
+                let employeeData = null;
+                
+                // Strategy 1: Match by employee ID
+                employeeData = teamScheduleData.find(entry => 
+                    entry.employee_id === member.id
+                );
+                
+                // Strategy 2: Match by employee name (exact)
+                if (!employeeData) {
+                    employeeData = teamScheduleData.find(entry => 
+                        entry.employee_name === member.name
+                    );
+                }
+                
+                // Strategy 3: Match by partial name (first name or last name)
+                if (!employeeData) {
+                    const memberNameParts = member.name.toLowerCase().split(' ');
+                    employeeData = teamScheduleData.find(entry => {
+                        if (!entry.employee_name) return false;
+                        const entryNameParts = entry.employee_name.toLowerCase().split(' ');
+                        // Check if any part of the names match
+                        return memberNameParts.some(part => 
+                            entryNameParts.some(entryPart => 
+                                part.includes(entryPart) || entryPart.includes(part)
+                            )
+                        );
+                    });
+                }
+                
+                // Now get the schedule for this specific date
+                let scheduleEntry = null;
+                if (employeeData && employeeData.schedules && employeeData.schedules[dateStr]) {
+                    scheduleEntry = employeeData.schedules[dateStr];
+                    console.log(`Found schedule for ${member.name} on ${dateStr}:`, scheduleEntry);
+                }
+                
+                if (scheduleEntry) {
+                    console.log(`Found schedule entry for ${member.name} on ${dateStr}:`, scheduleEntry);
+                    memberSchedule[dateStr] = {
+                        activity_type: scheduleEntry.activity_type,
+                        start_time: scheduleEntry.start_time || '08:00',
+                        end_time: scheduleEntry.end_time || '16:00',
+                        hours_worked: scheduleEntry.hours_worked || 8,
+                        is_night_shift: scheduleEntry.is_night_shift || false
+                    };
+                } else {
+                    console.log(`No schedule entry found for ${member.name} (ID: ${member.id}) on ${dateStr}`);
+                    
+                    // Log debugging info for first date only to avoid spam
+                    if (date === dateRange[0]) {
+                        console.log(`Employee data found:`, employeeData ? 'Yes' : 'No');
+                        if (employeeData) {
+                            console.log(`Available dates for ${member.name}:`, Object.keys(employeeData.schedules || {}));
+                        }
+                        
+                        // Log all available employee names for this date for debugging
+                        const allUniqueEmployees = [...new Set(teamScheduleData.map(e => `${e.employee_name} (ID: ${e.employee_id})`))];
+                        console.log(`All unique employees in schedule data:`, allUniqueEmployees);
+                    }
+                }
+            } else {
+                console.log('No team schedule data available');
             }
         });
         
         return { member, schedule: memberSchedule };
     });
-    
+
     return `
         <div class="bg-gray-800 rounded-lg shadow-lg mb-6 overflow-hidden">
             <!-- Team Header -->
-            <div class="bg-gradient-to-r ${team.color ? `from-${team.color}-600 to-${team.color}-700` : 'from-blue-600 to-blue-700'} px-6 py-4">
+            <div class="bg-gradient-to-r ${team.color ? `from-${team.color}-600 to-${team.color}-700` : 'from-blue-600 to-blue-700'} px-4 py-3">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-4 h-4 rounded-full ${team.color ? `bg-${team.color}-300` : 'bg-blue-300'}"></div>
-                        <h3 class="text-xl font-bold text-white">${team.name}</h3>
-                        <span class="text-sm text-gray-200">(${teamMembersWithCurrentData.length} membres)</span>
-                    </div>
+                    <h3 class="text-white font-bold text-xl">${team.name}</h3>
+                    <span class="text-lg text-gray-200 font-medium">${teamMembersWithCurrentData.length} membres</span>
                 </div>
             </div>
             
@@ -3590,14 +3956,14 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                     <!-- Date Headers -->
                     <thead class="bg-gray-700">
                         <tr>
-                            <th class="px-4 py-3 text-left text-gray-200 font-semibold sticky left-0 bg-gray-700 z-10 min-w-[120px]">
+                            <th class="px-4 py-3 text-left text-gray-200 font-semibold sticky left-0 bg-gray-700 min-w-[160px] border-r border-gray-600">
                                 Membre
                             </th>
                             ${dateRange.map(date => {
                                 const dayName = weekdays[date.getDay()];
                                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                                 return `
-                                    <th class="px-2 py-3 text-center text-gray-200 font-semibold min-w-[80px] ${isWeekend ? 'bg-gray-600' : ''}">
+                                    <th class="px-2 py-3 text-center text-gray-200 font-semibold min-w-[60px] ${isWeekend ? 'bg-gray-700' : 'bg-gray-600'}">
                                         <div class="flex flex-col">
                                             <span class="text-xs">${dayName}</span>
                                             <span class="text-sm font-bold">${date.getDate()}</span>
@@ -3606,7 +3972,7 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                                     </th>
                                 `;
                             }).join('')}
-                            <th class="px-4 py-3 text-center text-gray-200 font-semibold bg-gray-600 min-w-[100px] sticky right-0 z-10">
+                            <th class="px-4 py-3 text-center text-gray-200 font-bold sticky right-0 bg-gray-600 min-w-[100px] border-l border-gray-600">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-bold">Total</span>
                                     <span class="text-xs">Jours / Heures</span>
@@ -3664,55 +4030,91 @@ function generateTeamScheduleTable(team, startDate, endDate, dateRange) {
                             totalHours = Math.round(totalHours * 10) / 10;
                             
                             return `
-                            <tr class="hover:bg-gray-750">
-                                <td class="px-4 py-3 text-white font-medium sticky left-0 bg-gray-800 z-10 border-r border-gray-700">
-                                    ${member.name}
-                                </td>
-                                ${dateRange.map(date => {
-                                    const dateStr = getLocalDateString(date);
-                                    const dayOfWeek = date.getDay();
-                                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                                    let scheduleData = schedule[dateStr];
-                                    
-                                    // Inject F\n9h if previous day was a night shift (X or D starting at 17h)
-                                    if (!scheduleData) {
-                                        const prevDate = new Date(date);
-                                        prevDate.setDate(prevDate.getDate() - 1);
-                                        const prevDateStr = getLocalDateString(prevDate);
-                                        const prevDayData = schedule[prevDateStr];
-                                        if (prevDayData && prevDayData.is_night_shift) {
-                                            // Use the actual end time from the previous day's data, default to 09:00
-                                            const endTime = prevDayData.end_time || '09:00';
-                                            scheduleData = { activity_type: 'F', end_time: endTime };
+                                <tr class="hover:bg-gray-750">
+                                    <td class="px-4 py-3 text-white font-medium sticky left-0 bg-gray-800 z-10 border-r border-gray-700">
+                                        ${member.name}
+                                    </td>
+                                    ${dateRange.map(date => {
+                                        const dateStr = getLocalDateString(date);
+                                        const dayOfWeek = date.getDay();
+                                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                                        let scheduleData = schedule[dateStr];
+                                        
+                                        // Inject F\n9h if previous day was a night shift (X or D starting at 17h)
+                                        if (!scheduleData) {
+                                            const prevDate = new Date(date);
+                                            prevDate.setDate(prevDate.getDate() - 1);
+                                            const prevDateStr = getLocalDateString(prevDate);
+                                            const prevDayData = schedule[prevDateStr];
+                                            if (prevDayData && prevDayData.is_night_shift) {
+                                                // Use the actual end time from the previous day's data, default to 09:00
+                                                const endTime = prevDayData.end_time || '09:00';
+                                                scheduleData = { activity_type: 'F', end_time: endTime };
+                                            }
                                         }
-                                    }
-                                    
-                                    return `
-                                        <td class="px-2 py-3 text-center ${isWeekend ? 'bg-gray-700' : 'bg-gray-800'}">
-                                            ${scheduleData ? `
-                                                <div class="${getActivityTypeColor(scheduleData.activity_type)} text-white text-xs font-bold px-2 py-1 rounded">
-                                                    ${formatScheduleDisplay(scheduleData)}
-                                                </div>
-                                            ` : `
-                                                <span class="text-gray-500">-</span>
-                                            `}
-                                        </td>
-                                    `;
-                                }).join('')}
-                                <td class="px-4 py-3 text-center bg-gray-600 font-bold sticky right-0 z-10 border-l border-gray-700">
-                                    <div class="text-white">
-                                        <div class="text-sm font-bold">${totalDays} jour${totalDays !== 1 ? 's' : ''}</div>
-                                        <div class="text-xs text-gray-300">${totalHours}h</div>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
+                                        
+                                        const activityColor = scheduleData?.activity_type ? getActivityTypeColor(scheduleData.activity_type) : '';
+                                        
+                                        return `
+                                            <td class="px-2 py-3 text-center ${isWeekend ? 'bg-gray-700' : 'bg-gray-800'} text-white">
+                                                ${scheduleData ? 
+                                                    `<div class="${activityColor} text-white text-xs font-bold px-2 py-1 rounded inline-block">
+                                                        ${formatScheduleDisplay(scheduleData)}
+                                                    </div>` : 
+                                                    '<div class="text-sm">-</div>'
+                                                }
+                                            </td>
+                                        `;
+                                    }).join('')}
+                                    <td class="px-2 py-3 text-center bg-gray-600 font-bold sticky right-0 z-10 border-l border-gray-700">
+                                        <div class="text-sm text-white">
+                                            <div class="text-sm font-bold">${totalDays}</div>
+                                            <div class="text-xs text-gray-300">${totalHours}h</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
                         }).join('')}
                     </tbody>
                 </table>
             </div>
         </div>
     `;
+}
+
+function getActivityTypeColor(activityType) {
+    if (!activityType) return '';
+    
+    switch(activityType.toUpperCase()) {
+        case 'X': return 'bg-green-600';
+        case 'S': return 'bg-yellow-600';
+        case 'RP': return 'bg-blue-600';
+        case 'V': return 'bg-orange-600';
+        case 'F': return 'bg-red-600';
+        case 'D': return 'bg-purple-600';
+        case 'M': return 'bg-red-700';
+        default: return 'bg-gray-600';
+    }
+}
+
+function formatScheduleDisplay(scheduleData) {
+    if (!scheduleData) return '';
+    
+    const activityType = scheduleData.activity_type || '';
+    const startTime = scheduleData.start_time || '';
+    const endTime = scheduleData.end_time || '';
+    
+    if (activityType === 'F' && endTime) {
+        return `F<br>${endTime}`;
+    } else if (startTime && endTime && activityType !== 'V' && activityType !== 'M') {
+        return `${activityType}<br>${startTime}-${endTime}`;
+    } else {
+        return activityType;
+    }
+}
+
+function getLocalDateString(date) {
+    return date.toISOString().split('T')[0];
 }
 
 function calculateHours(startTime, endTime) {
@@ -3825,8 +4227,8 @@ function parseScheduleText(scheduleText) {
             endTime = '16:00';
             break;
         case 'RP': // Rencontre Prénatale
-            startTime = '10:00';
-            endTime = '18:00';
+            startTime = '08:00';
+            endTime = '16:00';
             break;
         case 'F': // Fin d'équipe de nuit
             // Check if there's a specific hour mentioned (like "F\n09h")
@@ -3861,10 +4263,6 @@ function parseScheduleText(scheduleText) {
             }
             break;
         case 'V': // Vacation/Vacances
-            startTime = '00:00';
-            endTime = '00:00';
-            break;
-        case 'C': // Congé
             startTime = '00:00';
             endTime = '00:00';
             break;
@@ -4103,7 +4501,6 @@ function getActivityTypeColor(activityType) {
         case 'X': // Garde
         case 'S': // Soutien de jour
         case 'R': // RP - Rencontre Prénatale
-        case 'C': // Congé
         default:
             return 'bg-green-600';
     }
@@ -4133,6 +4530,13 @@ function calculateHours(startTime, endTime) {
 // Verify that team members don't have individual schedule conflicts (not between team members)
 function verifyTeamScheduleConflicts(team, startDate, endDate) {
     const conflicts = [];
+    
+    // For teams loaded from backend API (without members array), skip conflict checking
+    if (!team.members || !Array.isArray(team.members)) {
+        console.log('Skipping conflict check for team without loaded members:', team.name);
+        return conflicts;
+    }
+    
     const dateRange = [];
     
     // Generate all dates in range
@@ -5200,6 +5604,7 @@ window.closeCreateTeamModal = closeCreateTeamModal;
 window.createTeam = createTeam;
 window.editTeam = editTeam;
 window.closeEditTeamModal = closeEditTeamModal;
+window.testTeamAPI = testTeamAPI;
 window.saveTeamChanges = saveTeamChanges;
 window.deleteTeam = deleteTeam;
 window.viewTeamDetail = viewTeamDetail;
