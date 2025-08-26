@@ -34,7 +34,16 @@ app = Flask(__name__)
 CORS(app) 
 
 # --- Database Configuration ---
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'core', 'data', 'workers.db')
+def get_database_path():
+    """Get database path that works in both development and packaged mode"""
+    if getattr(sys, '_MEIPASS', None):
+        # Running from PyInstaller bundle
+        return os.path.join(sys._MEIPASS, 'core', 'data', 'workers.db')
+    else:
+        # Running from source
+        return os.path.join(os.path.dirname(__file__), 'core', 'data', 'workers.db')
+
+DATABASE_PATH = get_database_path()
 
 def get_archive_directory():
     """Get the standardized archive directory path"""
@@ -3019,13 +3028,37 @@ def get_worker_schedule_by_date(worker_identifier):
 
 from flask import send_from_directory
 
+# Get absolute path to frontend directory
+def get_frontend_path():
+    """Get frontend path that works in both development and packaged mode"""
+    if getattr(sys, '_MEIPASS', None):
+        # Running from PyInstaller bundle - frontend should be in _MEIPASS
+        return os.path.join(sys._MEIPASS, 'frontend')
+    else:
+        # Running from source - use absolute path
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
+
+FRONTEND_DIR = get_frontend_path()
+print(f"FRONTEND_DIR resolved to: {FRONTEND_DIR}")
+print(f"Frontend index.html exists: {os.path.exists(os.path.join(FRONTEND_DIR, 'index.html'))}")
+
 @app.route('/')
 def serve_index():
-    return send_from_directory('../frontend', 'index.html')
+    try:
+        print(f"Serving index from: {FRONTEND_DIR}")
+        return send_from_directory(FRONTEND_DIR, 'index.html')
+    except Exception as e:
+        print(f"Error serving index: {e}")
+        return f"Error: {e}", 500
 
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('../frontend', path)
+    try:
+        print(f"Serving static file: {path} from: {FRONTEND_DIR}")
+        return send_from_directory(FRONTEND_DIR, path)
+    except Exception as e:
+        print(f"Error serving {path}: {e}")
+        return f"Error: {e}", 500
 
 
 

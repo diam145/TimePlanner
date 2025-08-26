@@ -48,3 +48,9 @@ frontend/js/README.md
 
 # Ignore entire electron-app folder
 electron-app/
+
+DESKTOP-APP-README.md
+backend.zip
+frontend.zip
+electron-app.zip
+backend/core/data/workers.db

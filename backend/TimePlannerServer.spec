@@ -6,7 +6,8 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('../frontend/*', 'frontend'),
+        ('../frontend', 'frontend'),
+        ('core/data', 'core/data'),
     ],
     hiddenimports=[
         'core.processor',
