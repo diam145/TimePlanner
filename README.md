@@ -1,85 +1,132 @@
-# TimePlanner Desktop Application
+# TimePlanner
 
-TimePlanner is a comprehensive employee schedule management application built with Flask backend and Electron frontend, packaged as a Windows desktop application.
+A desktop application for managing employee schedules and teams. Built with a Python/Flask backend and an Electron frontend, it runs fully locally on Windows as a self-contained desktop app.
+
+---
+
+## Overview
+
+TimePlanner is designed for small teams and managers who need a simple, offline schedule management tool. It runs a local Flask server on `127.0.0.1:5001` and stores all data in a local SQLite database — no cloud, no account required.
+
+---
 
 ## Features
 
-- ✅ Employee schedule management
-- ✅ Team management with member assignments
-- ✅ Excel export functionality
-- ✅ Calendar view for individual employees
-- ✅ Team schedule overview with color coding
-- ✅ Reports and archive management
-- ✅ Desktop application with auto-starting backend
+- Employee schedule creation and management
+- Team management with member assignments
+- Calendar view per employee
+- Team schedule overview with color-coded shifts
+- Excel export for schedules and reports
+- Archive and reports management
+- Auto-starting backend bundled with the desktop app
+- Works fully offline
 
-## Prerequisites
+---
 
-Before building the desktop application, ensure you have:
+## Tech Stack
 
-1. **Node.js** (version 16 or higher)
-   - Download from: https://nodejs.org/
-   - Verify installation: `node --version`
+| Layer | Technology |
+|---|---|
+| Backend | Python + Flask |
+| Frontend | Electron (JavaScript) |
+| Database | SQLite |
+| Packaging | Electron Builder (Windows installer + portable) |
+| API | REST (Flask → Electron) |
 
-2. **Python** (version 3.8 or higher)
-   - Download from: https://python.org/
-   - Verify installation: `python --version`
+---
 
-3. **Git** (optional, for cloning)
-   - Download from: https://git-scm.com/
-
-## Quick Start
-
-### Option 1: 
-1. **Build the application**:
-   ```bash
-   # For installer and portable versions
-   npm run build:win
-   
-   # For portable version only
-   npm run build:portable
-   ```
-
-2. **Find the built files** in `dist/`
-
-## Development
-
-### Running in Development Mode
-
-1. **Start the backend server**:
-   ```bash
-   cd backend
-   python app.py
-   ```
-
-2. **Start the Electron app** (in a new terminal):
-   ```bash
-   npm start
-   ```
-
-## Application Structure
+## Project Structure
 
 ```
-TimePlannerFlask/
-├── backend/                 # Flask backend server
-│   ├── app.py              # Main Flask application
-│   ├── startup.py          # Production startup script
-│   ├── requirements.txt    # Python dependencies
-│   └── core/              # Core application modules
-├── frontend/              # Electron frontend
-│   ├── main.js           # Main Electron process
-│   ├── package.json      # Node.js dependencies & build config
-│   ├── error.html        # Error fallback page
-│   └── assets/           # Application icons and resources
-└── build-desktop-app.bat # Automated build script
+TimePlanner/
+├── backend/               # Python Flask server
+│   └── app.py             # Main Flask app and API routes
+├── frontend/              # Electron app
+│   ├── main.js            # Electron main process
+│   └── src/               # UI pages and renderer scripts
+├── test_database.py       # Database tests
+├── package.json           # Node.js config and build scripts
+├── package-lock.json
+└── LICENSE                # MIT License
 ```
 
-## Security Considerations
+---
 
-- The application runs a local Flask server on `127.0.0.1:5001`
-- No external network access required for core functionality
-- Data is stored locally in SQLite database
-- Excel exports are saved to local file system
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) v16 or higher
+- [Python](https://www.python.org/) 3.8 or higher
+- Git
+
+### Development Mode
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/diam145/TimePlanner.git
+cd TimePlanner
+```
+
+2. Install Node.js dependencies:
+
+```bash
+npm install
+```
+
+3. Install Python dependencies:
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+4. Start the backend:
+
+```bash
+cd backend
+python app.py
+```
+
+5. In a new terminal, start the Electron app:
+
+```bash
+npm start
+```
+
+### Build for Windows
+
+```bash
+# Full installer + portable
+npm run build:win
+
+# Portable only
+npm run build:portable
+```
+
+Built files will appear in the `dist/` directory.
+
+---
+
+## Usage
+
+Once launched, the app connects to the local Flask backend automatically. From the main window you can:
+
+1. **Create and manage employees** — add team members and assign roles
+2. **Build schedules** — assign shifts via the calendar view
+3. **View team overviews** — color-coded team schedule at a glance
+4. **Export to Excel** — generate reports and share schedules
+5. **Archive records** — keep historical schedule data
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Author
+
+**[@diam145](https://github.com/diam145)**
